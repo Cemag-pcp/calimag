@@ -6,7 +6,7 @@ from django.core.files.base import ContentFile
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime, parse_date
 from django.core.paginator import Paginator
-from django.db.models import OuterRef, Subquery, Exists, Count, Q
+from django.db.models import OuterRef, Subquery, Exists, Count, Q, ExpressionWrapper, F, DateTimeField, DurationField, Value
 from django.views.decorators.http import require_GET
 from django.db import transaction
 from django.utils import timezone
@@ -152,7 +152,28 @@ def instrumentos_status_api(request):
 			filter=Q(pontos_calibracao__ativo=True),
 			distinct=True
 		),
+
+		valid_until=ExpressionWrapper(
+			F('last_recebimento_data') + ExpressionWrapper(
+				F('periodicidade_calibracao') * Value(datetime.timedelta(days=1)),
+				output_field=DurationField()
+			),
+			output_field=DateTimeField()
+		),
 	)
+
+	validade_inicio = request.GET.get('validade_inicio')
+	validade_fim = request.GET.get('validade_fim')
+
+	if validade_inicio:
+		start_date = parse_date(validade_inicio)
+		if start_date:
+			qs = qs.filter(valid_until__date__gte=start_date)
+
+	if validade_fim:
+		end_date = parse_date(validade_fim)
+		if end_date:
+			qs = qs.filter(valid_until__date__lte=end_date)
 
 	# =========================
 	# Paginação
