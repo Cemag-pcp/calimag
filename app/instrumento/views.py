@@ -80,6 +80,16 @@ def instrumentos_status_api(request):
 	if search:
 		qs = qs.filter(Q(codigo__icontains=search) | Q(descricao__icontains=search))
 
+	func_search = (request.GET.get('funcionario') or '').strip()
+	if func_search:
+		func_subquery = StatusInstrumento.objects.filter(
+			instrumento=OuterRef('pk')
+		).filter(
+			Q(funcionario__nome__icontains=func_search) |
+			Q(funcionario__matricula__icontains=func_search)
+		)
+		qs = qs.filter(Exists(func_subquery))
+
 	tipo_id = request.GET.get('tipo_id')
 	if tipo_id and tipo_id.isdigit():
 		qs = qs.filter(tipo_instrumento_id=int(tipo_id))

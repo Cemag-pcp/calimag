@@ -29,7 +29,7 @@ SECRET_KEY = 'django-insecure-c(^&5umuz#to#6)v$8r^7269t8e!f^s1b!b9___)l0b2dt_xc!
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['calimag.onrender.com']
+ALLOWED_HOSTS = ['calimag.onrender.com', '127.0.0.1']
 
 
 # Application definition
