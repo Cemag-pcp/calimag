@@ -150,6 +150,10 @@ if not AWS_S3_CUSTOM_DOMAIN and AWS_STORAGE_BUCKET_NAME:
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = env(
+    'STATICFILES_STORAGE',
+    default='django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
+)
 
 # Media files
 # MEDIA_URL = 'media/'
