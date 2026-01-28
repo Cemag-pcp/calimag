@@ -1,0 +1,225 @@
+codigo,tipo,instrumento_controlado
+ESQ-CQ-010,Esquadro,TRUE
+AAD-CQ-001,Alicate Amperimetro digital,TRUE
+BAL-CQ-001,Balança,TRUE
+BAL-CQ-002,Balança,TRUE
+BAL-CQ-003,Balança,TRUE
+CFD-CQ-002,Copo Ford N° 4,TRUE
+DUR-CQ-001,Durômetro,TRUE
+ESM-CQ-001,Esquadro,TRUE
+ESM-CQ-002,Esquadro,TRUE
+ESQ-CQ-002,Esquadro,TRUE
+ESQ-CQ-003,Esquadro,TRUE
+ESQ-CQ-004,Esquadro,TRUE
+ESQ-CQ-006,Esquadro,TRUE
+ESQ-CQ-011,Esquadro,TRUE
+ESQ-CQ-012,Esquadro,TRUE
+ESQ-CQ-015,Esquadro,TRUE
+ESQ-CQ-019,Esquadro,TRUE
+ESQ-CQ-020,Esquadro,TRUE
+ESQ-CQ-021,Esquadro,TRUE
+ESQ-CQ-024,Esquadro,TRUE
+ESQ-CQ-025,Esquadro,TRUE
+ESQ-CQ-026,Esquadro,TRUE
+ESQ-CQ-027,Esquadro,TRUE
+ESQ-CQ-029,Esquadro,TRUE
+ESQ-CQ-030,Esquadro,TRUE
+ESQ-CQ-031,Esquadro,TRUE
+ESQ-CQ-032,Esquadro,TRUE
+ESQ-CQ-033,Esquadro,TRUE
+ESQ-CQ-035,Esquadro,TRUE
+FLU-CQ-025,Fluxômetro Bibimetro,TRUE
+FLU-CQ-026,Fluxômetro Bibimetro,TRUE
+FLU-CQ-027,Fluxômetro Bibimetro,TRUE
+FLU-CQ-030,Fluxômetro Bibimetro,TRUE
+FLU-CQ-031,Fluxômetro Bibimetro,TRUE
+FLU-CQ-033,Fluxômetro Bibimetro,TRUE
+FLU-CQ-034,Fluxômetro Bibimetro,TRUE
+FLU-CQ-036,Fluxômetro Bibimetro,TRUE
+FLU-CQ-039,Fluxômetro Bibimetro,TRUE
+FLU-CQ-040,Fluxômetro Bibimetro,TRUE
+FLU-CQ-041,Fluxômetro Bibimetro,TRUE
+FLU-CQ-042,Fluxômetro Bibimetro,TRUE
+FLU-CQ-044,Fluxômetro Bibimetro,TRUE
+FLU-CQ-045,Fluxômetro Bibimetro,TRUE
+FLU-CQ-046,Fluxômetro Bibimetro,TRUE
+FLU-CQ-048,Fluxômetro Bibimetro,TRUE
+FLU-CQ-050,Fluxômetro Bibimetro,TRUE
+FLU-CQ-055,Fluxômetro Bibimetro,TRUE
+GON-CQ-004,Gôniometro,TRUE
+GON-CQ-005,Gôniometro,TRUE
+GON-CQ-006,Gôniometro,TRUE
+LPG-CQ-002,Lupa Graduada,TRUE
+MAN-PI-009,Manômetro,TRUE
+MAN-PI-011,Manômetro,TRUE
+MAN-PI-012,Manômetro,TRUE
+MAN-PI-014,Manômetro,TRUE
+MAN-PI-015,Manômetro,TRUE
+MAN-PI-016,Manômetro,TRUE
+MAN-PI-017,Manômetro,TRUE
+MAN-PI-018,Manômetro,TRUE
+MAN-PI-019,Manômetro,TRUE
+MAN-PI-020,Manômetro,TRUE
+MAN-PI-021,Manômetro,TRUE
+MAN-PI-022,Manômetro,TRUE
+MAN-PI-023,Manômetro,TRUE
+MAN-PI-025,Manômetro,TRUE
+MAN-PI-026,Manômetro,TRUE
+MAN-PI-027,Manômetro,TRUE
+MAN-PI-028,Manômetro,TRUE
+MAN-PI-029,Manômetro,TRUE
+MAN-PI-030,Manômetro,TRUE
+MAN-PI-031,Manômetro,TRUE
+MIC-CQ-001,micrômetro,TRUE
+MIC-CQ-002,micrômetro,TRUE
+NIV-CQ-001,Nível de bolha simples,TRUE
+NIV-CQ-003,Nível de bolha simples,TRUE
+NIV-CQ-004,Nível de bolha simples,TRUE
+NIV-CQ-006,Nível de bolha simples,TRUE
+NIV-CQ-007,Nível de bolha simples,TRUE
+NIV-CQ-008,Nível de bolha simples,TRUE
+NIV-CQ-009,Nível de bolha simples,TRUE
+NIV-CQ-010,Nível de bolha simples,TRUE
+NIV-CQ-015,Nível de bolha simples,TRUE
+NIV-CQ-016,Nível de bolha simples,TRUE
+NIV-CQ-017,Nível de bolha simples,TRUE
+NIV-CQ-021,Nível de bolha simples,TRUE
+NIV-CQ-022,Nível de bolha simples,TRUE
+NIV-CQ-023,Nível de bolha simples,TRUE
+NIV-CQ-024,Nível de bolha simples,TRUE
+PAQ-CE-001,paquímetro digital,TRUE
+PAQ-CE-002,paquímetro digital,TRUE
+PAQ-CE-003,paquímetro analógico,TRUE
+PAQ-CQ-002,paquímetro analógico,TRUE
+PAQ-CQ-003,paquímetro analógico,TRUE
+PAQ-CQ-004,paquímetro analógico,TRUE
+PAQ-CQ-006,paquímetro analógico,TRUE
+PAQ-CQ-010,paquímetro analógico,TRUE
+PAQ-CQ-011,paquímetro analógico,TRUE
+PAQ-CQ-012,paquímetro analógico,TRUE
+PAQ-CQ-013,paquímetro analógico,TRUE
+PAQ-CQ-064,paquímetro analógico,TRUE
+PAQ-CQ-065,paquímetro analógico,TRUE
+PAQ-CQ-066,paquímetro digital,TRUE
+PAQ-CQ-069,Paquímetro analógico,TRUE
+PAQ-CQ-070,paquímetro analógico,TRUE
+PAQ-CQ-080,Paquímetro analógico,TRUE
+PAQ-CQ-073,paquímetro analógico,TRUE
+PAQ-CQ-076,Paquímetro analógico,TRUE
+PAQ-CQ-077,paquímetro digital,TRUE
+PAQ-CQ-079,Paquímetro analógico,TRUE
+PAQ-CQ-081,Paquímetro analógico,TRUE
+PAQ-CQ-083,Paquímetro analógico,TRUE
+PAQ-CQ-084,paquímetro analógico,TRUE
+PAQ-CQ-085,paquímetro analógico,TRUE
+PAQ-CQ-086,paquímetro analógico,TRUE
+PAQ-CQ-087,paquímetro analógico,TRUE
+PAQ-CQ-088,Paquímetro analógico,TRUE
+PAQ-MA-002,Paquímetro analógico,TRUE
+PAQ-US-004,paquímetro analógico,TRUE
+PAQ-US-005,paquímetro analógico,TRUE
+PRE-PI-001,Pressostato (sensor de pressão),TRUE
+PRE-PI-002,Pressostato (sensor de pressão),TRUE
+PRE-PI-003,Pressostato (sensor de pressão),TRUE
+PRE-PI-004,Pressostato (sensor de pressão),TRUE
+PRE-PI-005,Pressostato (sensor de pressão),TRUE
+RLC-CQ-001,Relógio Comparador,TRUE
+TER-FO-001,Termopar,TRUE
+TER-PI-002,Termopar,TRUE
+TER-PI-003,Termopar,TRUE
+TER-PI-004,Termopar,TRUE
+TER-PI-005,Termopar,TRUE
+TER-PI-006,Termopar,TRUE
+TER-PI-007,Termopar,TRUE
+TER-PI-008,Termopar,TRUE
+TER-PI-009,Termopar,TRUE
+TER-PI-010,Termopar,TRUE
+TMT-CQ-001,Termômetro,TRUE
+TMT-CQ-002,Termômetro,TRUE
+TRE-CQ-005,Trena,TRUE
+TRE-CQ-007,Trena,TRUE
+TRE-CQ-010,Trena,TRUE
+TRE-CQ-031,Trena,TRUE
+TRE-CQ-036,Trena,TRUE
+TRE-CQ-048,Trena,TRUE
+TRE-CQ-095,Trena,TRUE
+TRE-CQ-104,Trena,TRUE
+TRE-CQ-123,Trena,TRUE
+TRE-CQ-124,Trena,TRUE
+TRE-CQ-131,Trena,TRUE
+TRE-CQ-137,Trena,TRUE
+TRE-CQ-139,Trena,TRUE
+TRE-CQ-143,Trena,TRUE
+TRE-CQ-144,Trena,TRUE
+TRE-CQ-146,Trena,TRUE
+TRE-CQ-154,Trena,TRUE
+TRE-CQ-158,Trena,TRUE
+TRE-CQ-159,Trena,TRUE
+TRE-CQ-160,Trena,TRUE
+TRE-CQ-161,Trena,TRUE
+TRE-CQ-163,Trena,TRUE
+TRE-CQ-164,Trena,TRUE
+TRE-CQ-166,Trena,TRUE
+TRE-CQ-167,Trena,TRUE
+TRE-CQ-169,Trena,TRUE
+TRE-CQ-171,Trena,TRUE
+TRE-CQ-172,Trena,TRUE
+TRE-CQ-173,Trena,TRUE
+TRE-CQ-174,Trena,TRUE
+TRE-CQ-175,Trena,TRUE
+TRE-CQ-177,Trena,TRUE
+TRE-CQ-190,Trena,TRUE
+TRE-CQ-180,Trena,TRUE
+TRE-CQ-181,Trena,TRUE
+TRE-CQ-182,Trena,TRUE
+TRE-CQ-183,Trena,TRUE
+TRE-CQ-184,Trena,TRUE
+TRE-CQ-185,Trena,TRUE
+TRE-CQ-186,Trena,TRUE
+TRE-CQ-191,Trena,TRUE
+TRE-CQ-192,Trena,TRUE
+TRE-CQ-194,Trena,TRUE
+TRE-CQ-195,Trena,TRUE
+TRE-CQ-196,Trena,TRUE
+TRE-CQ-197,Trena,TRUE
+TRE-CQ-198,Trena,TRUE
+TRE-CQ-199,Trena,TRUE
+TRE-CQ-200,Trena,TRUE
+TRE-CQ-201,Trena,TRUE
+TRE-CQ-207,Trena,TRUE
+TRE-CQ-208,Trena,TRUE
+TRE-CQ-215,Trena,TRUE
+TRE-CQ-220,Trena,TRUE
+TRM-CQ-001,Terrômetro,TRUE
+PAQ-CQ-089,paquímetro digital,TRUE
+FLU-CQ-070,Fluxômetro Bibimetro,TRUE
+MAN-PI-0024,Manômetro,TRUE
+TRE-CQ-156,Trena,TRUE
+ESQ-CQ-016,Esquadro,TRUE
+PAQ-CQ-082,paquímetro analógico,TRUE
+TRE-CQ-176,Trena,TRUE
+ESQ-CQ-037,Esquadro,TRUE
+PAQ-CQ-090,paquímetro analógico,TRUE
+TRE-CQ-054,Trena,TRUE
+PAQ-CQ-009,paquímetro digital,TRUE
+TRE-CQ-115,Trena,TRUE
+ESQ-CQ-038,Esquadro,TRUE
+ESQ-CQ-039,Esquadro,TRUE
+TRE-CQ-218,Trena,TRUE
+TRE-CQ-212,Trena,TRUE
+TRE-CQ-217,Trena,TRUE
+TRE-CQ-205,Trena,TRUE
+TRE-CQ-193,Trena,TRUE
+TRE-CQ-203,Trena,TRUE
+PAQ-CQ-015,paquímetro analógico,TRUE
+PAQ-CQ-007,paquímetro analógico,TRUE
+TRE-CQ-219,Trena,TRUE
+TMH-PI-004,TERMOHIGROMETRO,TRUE
+TRE-CQ-120,Trena,TRUE
+TRE-CQ-147,Trena,TRUE
+TRE-CQ-213,Trena,TRUE
+TRE-CQ-116,Trena,TRUE
+DBT-CQ-001,Decibelímetro,TRUE
+PAQ-CQ-071,paquímetro analógico,TRUE
+TRE-CQ-094,Trena,TRUE
+FLU-CQ-029,Fluxômetro Bibimetro,TRUE

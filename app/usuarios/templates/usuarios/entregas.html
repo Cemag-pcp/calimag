@@ -1,0 +1,794 @@
+{% extends 'usuarios/base.html' %}
+
+{% block content %}
+
+    <div class="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Entregas</h1>
+            <p class="text-gray-600 mt-1">Gerencie a entrega de instrumentos para funcionários</p>
+        </div>
+        <div class="flex space-x-3">
+            <button onclick="openDesignationModal()" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition flex items-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                <span>Entregar</span>
+            </button>
+            <button onclick="openDevolucaoModal()" class="bg-amber-500 text-white px-6 py-3 rounded-lg hover:bg-amber-600 transition flex items-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-8 10-5-5"/>
+                </svg>
+                <span>Devolução</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="mt-6 bg-white rounded-lg shadow-md p-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Busca</label>
+                <input id="entregasSearch" type="text" placeholder="Funcionário, matrícula, código, descrição..." class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select id="entregasStatus" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    <option value="all">Todos</option>
+                    <option value="ativo">Ativos</option>
+                    <option value="finalizado">Finalizados</option>
+                </select>
+            </div>
+            <div class="flex items-end">
+                <button id="entregasRefresh" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Atualizar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela -->
+    <div class="mt-6 bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Funcionário</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Matrícula</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Instrumento</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data Início</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data Fim</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Observações</th>
+                    </tr>
+                </thead>
+                <tbody id="entregasBody" class="bg-white divide-y divide-gray-200"></tbody>
+            </table>
+        </div>
+        <div class="mt-4 flex flex-col gap-3 border-t border-gray-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <p id="entregasPaginationInfo" class="text-sm text-gray-600">Carregando...</p>
+            <div class="flex gap-2">
+                <button id="entregasPrevPage" class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 disabled:opacity-50" disabled>Anterior</button>
+                <button id="entregasNextPage" class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 disabled:opacity-50" disabled>Próximo</button>
+            </div>
+        </div>
+    </div>
+
+<!-- Modal Designation -->
+<div id="designationModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-3xl shadow-lg rounded-lg bg-white">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold">Enrtegar Instrumento para Funcionário</h3>
+            <button onclick="closeDesignationModal()" class="text-gray-400 hover:text-gray-600">✕</button>
+        </div>
+
+        <div class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Funcionário</label>
+                    <select id="design_funcionario" class="w-full px-3 py-2 border rounded"></select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Instrumento</label>
+                    <select id="design_instrumento" class="w-full px-3 py-2 border rounded"></select>
+                </div>
+            </div>
+
+            <div class="flex justify-end">
+                <button onclick="addDesignItem()" class="px-4 py-2 bg-indigo-600 text-white rounded">Adicionar</button>
+            </div>
+
+            <div class="bg-gray-50 border rounded">
+                <table class="min-w-full">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs">Funcionário</th>
+                            <th class="px-4 py-2 text-left text-xs">Instrumento</th>
+                            <th class="px-4 py-2 text-left text-xs">Observações</th>
+                            <th class="px-4 py-2 text-right text-xs">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="designTableBody">
+                        <tr><td colspan="4" class="px-4 py-3 text-center text-gray-500">Nenhum item adicionado.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-end space-x-3">
+                <button onclick="closeDesignationModal()" class="px-4 py-2 border rounded">Cancelar</button>
+                <button onclick="openSignatureModal()" class="px-6 py-2 bg-emerald-600 text-white rounded">Assinar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Assinatura -->
+<div id="signatureModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-lg bg-white">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold">Assinar</h3>
+            <button onclick="closeSignatureModal()" class="text-gray-400 hover:text-gray-600">✕</button>
+        </div>
+
+        <div>
+            <div class="border rounded p-2">
+                <canvas id="signatureCanvas" class="w-full" style="height:200px;"></canvas>
+            </div>
+            <div class="mt-3 flex justify-between">
+                <button onclick="clearSignature()" class="px-4 py-2 border rounded">Limpar</button>
+                <div class="space-x-2">
+                    <button onclick="closeSignatureModal()" class="px-4 py-2 border rounded">Cancelar</button>
+                    <button id="btnConfirmSignature" onclick="submitDesignWithSignature()" class="px-6 py-2 bg-emerald-600 text-white rounded">Confirmar e Assinar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Devolução -->
+<div id="devolucaoModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-lg bg-white">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold">Registrar Devolução</h3>
+            <button onclick="closeDevolucaoModal()" class="text-gray-400 hover:text-gray-600">✕</button>
+        </div>
+        <div class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Funcionário</label>
+                    <select id="devolucao_funcionario" class="w-full px-3 py-2 border rounded"></select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Instrumento</label>
+                    <select id="devolucao_instrumento" class="w-full px-3 py-2 border rounded" disabled></select>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Data da devolução</label>
+                    <input id="devolucao_data" type="datetime-local" class="w-full px-3 py-2 border rounded" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Observações</label>
+                    <textarea id="devolucao_observacoes" class="w-full px-3 py-2 border rounded h-24"></textarea>
+                </div>
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button onclick="closeDevolucaoModal()" class="px-4 py-2 border rounded">Cancelar</button>
+                <button id="btnSubmitDevolucao" onclick="submitDevolucao()" class="px-6 py-2 bg-emerald-600 text-white rounded">Confirmar devolução</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function getCSRF() {
+    const name = 'csrftoken';
+    const cookies = document.cookie.split(';').map(c=>c.trim());
+    for (const c of cookies) {
+        if (c.startsWith(name + '=')) return decodeURIComponent(c.split('=')[1]);
+    }
+    return '';
+}
+
+const ENTREGA_PREFILL_STORAGE_KEY = 'calibracao_entrega_prefill';
+const ENTREGAS_PAGE_SIZE = 15;
+
+let entregasFilters = { search: '', status: 'all' };
+let entregasPagination = { page: 1, pages: 1, total: 0 };
+let entregasTableData = [];
+let entregasSearchTimeout = null;
+
+let designItems = [];
+let designInstrumentoChoices = null;
+let designFuncionarioChoices = null;
+
+async function openDesignationModal(prefillOptions) {
+    renderDesignTable();
+    const modal = document.getElementById('designationModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
+    try {
+        await Promise.all([loadDesignFuncionarios(), loadDesignInstrumentos()]);
+        if (prefillOptions) {
+            applyDesignationPrefill(prefillOptions);
+        }
+    } catch (error) {
+        console.error('Erro ao carregar dados para entrega:', error);
+    }
+}
+
+function closeDesignationModal() {
+    document.getElementById('designationModal').classList.add('hidden');
+}
+
+async function loadDesignFuncionarios() {
+    try {
+        const resp = await fetch('/cadastro/api/funcionarios/');
+        const data = await resp.json();
+        const sel = document.getElementById('design_funcionario');
+        sel.innerHTML = '<option value="">Selecione funcionário...</option>';
+        (data.funcionarios || []).forEach(f => {
+            sel.innerHTML += `<option value="${f.id}">${f.matricula} - ${f.nome}</option>`;
+        });
+        if (designFuncionarioChoices) {
+            designFuncionarioChoices.destroy();
+            designFuncionarioChoices = null;
+        }
+        if (window.Choices) {
+            designFuncionarioChoices = new Choices('#design_funcionario', {
+                searchEnabled: true,
+                shouldSort: false,
+                itemSelectText: '',
+                placeholder: true,
+                placeholderValue: 'Selecione funcionário...'
+            });
+        }
+    } catch (e) { console.error(e); }
+}
+
+async function loadDesignInstrumentos() {
+    try {
+        const resp = await fetch('/instrumentos/api/disponiveis/');
+        const data = await resp.json();
+        const sel = document.getElementById('design_instrumento');
+        sel.innerHTML = '<option value="">Selecione instrumento...</option>';
+        const itens = data.instrumentos || [];
+        itens.forEach(i => {
+            const opt = document.createElement('option');
+            opt.value = i.id;
+            opt.textContent = `${i.codigo} - ${i.descricao} - ${i.tipo}`;
+            sel.appendChild(opt);
+        });
+        if (designInstrumentoChoices) {
+            designInstrumentoChoices.destroy();
+            designInstrumentoChoices = null;
+        }
+        if (window.Choices) {
+            designInstrumentoChoices = new Choices('#design_instrumento', {
+                searchEnabled: true,
+                shouldSort: false,
+                itemSelectText: '',
+                placeholder: true,
+                placeholderValue: 'Selecione instrumento...'
+            });
+        }
+    } catch (e) { console.error(e); }
+}
+
+function setSelectWithChoices(selectEl, value, label, choicesInstance) {
+    if (!selectEl || value === undefined || value === null) return;
+    const stringValue = String(value);
+    let optionExists = Array.from(selectEl.options || []).some(opt => opt.value === stringValue);
+    if (!optionExists && label) {
+        const opt = document.createElement('option');
+        opt.value = stringValue;
+        opt.textContent = label;
+        selectEl.appendChild(opt);
+        optionExists = true;
+    }
+    if (choicesInstance) {
+        const result = choicesInstance.setChoiceByValue(stringValue);
+        const missing = !result || (Array.isArray(result) && !result.length);
+        if (missing && label) {
+            choicesInstance.setChoices([{ value: stringValue, label: label, selected: true }], 'value', 'label', false);
+        }
+        choicesInstance.setChoiceByValue(stringValue);
+    } else if (optionExists) {
+        selectEl.value = stringValue;
+    }
+}
+
+function applyDesignationPrefill(prefill) {
+    if (!prefill) return;
+    const funcSelect = document.getElementById('design_funcionario');
+    const instSelect = document.getElementById('design_instrumento');
+    const funcLabel = prefill.funcionario_matricula
+        ? `${prefill.funcionario_matricula} - ${prefill.funcionario_nome || ''}`.trim()
+        : (prefill.funcionario_nome || '');
+    const instLabel = prefill.instrumento_codigo
+        ? `${prefill.instrumento_codigo} - ${prefill.instrumento_descricao || ''}`.trim()
+        : (prefill.instrumento_descricao || '');
+    if (prefill.funcionario_id) {
+        setSelectWithChoices(funcSelect, prefill.funcionario_id, funcLabel, designFuncionarioChoices);
+    }
+    if (prefill.instrumento_id) {
+        setSelectWithChoices(instSelect, prefill.instrumento_id, instLabel, designInstrumentoChoices);
+    }
+}
+
+function addDesignItem() {
+    const funcId = document.getElementById('design_funcionario').value;
+    const instId = document.getElementById('design_instrumento').value;
+    if (!funcId || !instId) { alert('Selecione funcionário e instrumento'); return; }
+    if (designItems.find(it => it.instrumento_id == instId)) { alert('Instrumento já adicionado'); return; }
+    const funcText = document.getElementById('design_funcionario').selectedOptions[0].text;
+    const instText = document.getElementById('design_instrumento').selectedOptions[0].text;
+    designItems.push({ funcionario_id: funcId, instrumento_id: instId, funcionario_label: funcText, instrumento_label: instText });
+    renderDesignTable();
+}
+
+function renderDesignTable() {
+    const tbody = document.getElementById('designTableBody');
+    if (!designItems.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-3 text-center text-gray-500">Nenhum item adicionado.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = designItems.map((it, idx) => `
+        <tr class="hover:bg-gray-50">
+            <td class="px-4 py-2 text-sm">${it.funcionario_label}</td>
+            <td class="px-4 py-2 text-sm">${it.instrumento_label}</td>
+            <td class="px-4 py-2 text-sm">${it.observacoes || ''}</td>
+            <td class="px-4 py-2 text-right text-sm"><button onclick="removeDesignItem(${idx})" class="text-red-600">Remover</button></td>
+        </tr>
+    `).join('');
+}
+
+function removeDesignItem(index) {
+    designItems.splice(index, 1);
+    renderDesignTable();
+}
+
+function openSignatureModal() {
+    if (!designItems.length) { alert('Adicione ao menos um item para assinar'); return; }
+    document.getElementById('signatureModal').classList.remove('hidden');
+    setupSignatureCanvas();
+}
+
+function closeSignatureModal() {
+    document.getElementById('signatureModal').classList.add('hidden');
+}
+
+let sigCanvas, sigCtx, drawing = false;
+function setupSignatureCanvas() {
+    sigCanvas = document.getElementById('signatureCanvas');
+    sigCtx = sigCanvas.getContext('2d');
+    sigCanvas.width = sigCanvas.clientWidth;
+    sigCanvas.height = 200;
+    sigCtx.fillStyle = '#fff';
+    sigCtx.fillRect(0,0,sigCanvas.width,sigCanvas.height);
+    sigCtx.strokeStyle = '#000';
+    sigCtx.lineWidth = 2;
+
+    sigCanvas.onpointerdown = (e) => { drawing = true; sigCtx.beginPath(); sigCtx.moveTo(e.offsetX, e.offsetY); };
+    sigCanvas.onpointermove = (e) => { if (!drawing) return; sigCtx.lineTo(e.offsetX, e.offsetY); sigCtx.stroke(); };
+    sigCanvas.onpointerup = () => { drawing = false; };
+}
+
+function clearSignature() {
+    if (sigCtx) {
+        sigCtx.clearRect(0,0,sigCanvas.width,sigCanvas.height);
+        sigCtx.fillStyle = '#fff';
+        sigCtx.fillRect(0,0,sigCanvas.width,sigCanvas.height);
+    }
+}
+
+async function submitDesignWithSignature() {
+    const submitBtn = document.getElementById('btnConfirmSignature');
+    const originalText = submitBtn ? submitBtn.textContent : '';
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.classList.add('opacity-70');
+        submitBtn.textContent = 'Enviando...';
+    }
+    const dataUrl = sigCanvas.toDataURL('image/png');
+    const promises = designItems.map(item => {
+        return fetch('/instrumentos/api/designar/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRF()
+            },
+            body: JSON.stringify({
+                funcionario_id: item.funcionario_id,
+                instrumento_id: item.instrumento_id,
+                observacoes: item.observacoes || '',
+                assinatura: dataUrl
+            })
+        }).then(r => r.json());
+    });
+
+    try {
+        const results = await Promise.all(promises);
+        const errors = results.filter(r => !r.success);
+        if (errors.length) {
+            alert('Algumas designações falharam');
+        } else {
+            alert('Designações realizadas com sucesso');
+            designItems = [];
+            renderDesignTable();
+            closeSignatureModal();
+            closeDesignationModal();
+        }
+    } catch (e) {
+        alert('Erro ao enviar designações');
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-70');
+            submitBtn.textContent = originalText || 'Confirmar e Assinar';
+        }
+    }
+}
+</script>
+<script>
+let entregasCache = [];
+const devolucaoFuncionarioSelect = document.getElementById('devolucao_funcionario');
+const devolucaoInstrumentoSelect = document.getElementById('devolucao_instrumento');
+const devolucaoModalEl = document.getElementById('devolucaoModal');
+
+function getEntregaFiltersFromForm() {
+    const searchInput = document.getElementById('entregasSearch');
+    const statusSelect = document.getElementById('entregasStatus');
+    return {
+        search: searchInput ? searchInput.value.trim() : '',
+        status: statusSelect ? statusSelect.value : 'all'
+    };
+}
+
+async function loadEntregas(options = {}) {
+    const { pageOverride = null, updateFilters = false } = options;
+    if (updateFilters) {
+        entregasFilters = getEntregaFiltersFromForm();
+    }
+    if (typeof pageOverride === 'number' && !Number.isNaN(pageOverride)) {
+        entregasPagination.page = Math.max(1, pageOverride);
+    }
+
+    const params = new URLSearchParams();
+    params.append('page', entregasPagination.page);
+    params.append('per_page', ENTREGAS_PAGE_SIZE);
+    if (entregasFilters.search) params.append('search', entregasFilters.search);
+    if (entregasFilters.status && entregasFilters.status !== 'all') params.append('status', entregasFilters.status);
+
+    try {
+        const res = await fetch(`/instrumentos/api/entregas/?${params.toString()}`);
+        const data = await res.json();
+        entregasTableData = data.entregas || [];
+        entregasPagination = data.pagination || { page: 1, pages: 1, total: entregasTableData.length, per_page: ENTREGAS_PAGE_SIZE };
+        if (!entregasPagination.page) entregasPagination.page = 1;
+        renderEntregas(entregasTableData);
+        renderEntregasPagination();
+        if (devolucaoModalEl && !devolucaoModalEl.classList.contains('hidden')) {
+            refreshDevolucaoCache(true);
+            populateDevolucaoFuncionarios();
+            populateDevolucaoInstrumentos();
+        }
+    } catch (error) {
+        console.error('Erro ao carregar entregas:', error);
+        entregasTableData = [];
+        entregasPagination = { page: 1, pages: 1, total: 0 };
+        renderEntregas([]);
+        renderEntregasPagination();
+    }
+}
+
+function renderEntregasPagination() {
+    const info = document.getElementById('entregasPaginationInfo');
+    if (info) {
+        const page = entregasPagination?.page || 1;
+        const pages = entregasPagination?.pages || 1;
+        const total = entregasPagination?.total || 0;
+        info.textContent = total ? `Página ${page} de ${pages} — ${total} entrega(s)` : 'Nenhuma entrega encontrada';
+    }
+    const prevBtn = document.getElementById('entregasPrevPage');
+    if (prevBtn) {
+        prevBtn.disabled = !(entregasPagination && entregasPagination.page > 1);
+    }
+    const nextBtn = document.getElementById('entregasNextPage');
+    if (nextBtn) {
+        nextBtn.disabled = !(entregasPagination && entregasPagination.page < entregasPagination.pages);
+    }
+}
+
+function setupEntregasPaginationControls() {
+    const prevBtn = document.getElementById('entregasPrevPage');
+    if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+            if (entregasPagination && entregasPagination.page > 1) {
+                loadEntregas({ pageOverride: entregasPagination.page - 1 });
+            }
+        });
+    }
+    const nextBtn = document.getElementById('entregasNextPage');
+    if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+            if (entregasPagination && entregasPagination.page < entregasPagination.pages) {
+                loadEntregas({ pageOverride: entregasPagination.page + 1 });
+            }
+        });
+    }
+}
+
+async function refreshDevolucaoCache(force = false) {
+    if (!force && entregasCache.length) return;
+    try {
+        const params = new URLSearchParams();
+        params.append('status', 'ativo');
+        params.append('page', 1);
+        params.append('per_page', 200);
+        const res = await fetch(`/instrumentos/api/entregas/?${params.toString()}`);
+        const data = await res.json();
+        entregasCache = data.entregas || [];
+    } catch (error) {
+        console.error('Erro ao carregar entregas ativas para devolução:', error);
+        entregasCache = [];
+    }
+}
+
+async function ensureDevolucaoCache() {
+    if (!entregasCache.length) {
+        await refreshDevolucaoCache(true);
+    }
+}
+
+async function openDevolucaoModal() {
+    await ensureDevolucaoCache();
+    populateDevolucaoFuncionarios();
+    populateDevolucaoInstrumentos();
+    const obsField = document.getElementById('devolucao_observacoes');
+    const dateField = document.getElementById('devolucao_data');
+    if (obsField) obsField.value = '';
+    if (dateField) dateField.value = '';
+    if (devolucaoModalEl) {
+        devolucaoModalEl.classList.remove('hidden');
+    }
+}
+
+function closeDevolucaoModal() {
+	if (devolucaoModalEl) {
+		devolucaoModalEl.classList.add('hidden');
+	}
+}
+
+function populateDevolucaoFuncionarios() {
+    if (!devolucaoFuncionarioSelect) return;
+    const ativos = (entregasCache || []).filter(item => item.ativo && item.funcionario_id);
+    const unique = [];
+    const seen = new Set();
+    ativos.forEach(item => {
+        if (!seen.has(item.funcionario_id)) {
+            seen.add(item.funcionario_id);
+            unique.push({
+                id: item.funcionario_id,
+                nome: item.funcionario || 'Sem nome',
+                matricula: item.funcionario_matricula || ''
+            });
+        }
+    });
+    devolucaoFuncionarioSelect.innerHTML = '<option value="">Selecione funcionário...</option>';
+    unique.forEach(func => {
+        const labelMat = func.matricula ? func.matricula : 'Sem matrícula';
+        devolucaoFuncionarioSelect.innerHTML += `<option value="${func.id}">${labelMat} - ${func.nome}</option>`;
+    });
+    devolucaoFuncionarioSelect.disabled = !unique.length;
+    if (!unique.length) {
+        if (devolucaoInstrumentoSelect) {
+            devolucaoInstrumentoSelect.innerHTML = '<option value="">Nenhum instrumento ativo</option>';
+            devolucaoInstrumentoSelect.disabled = true;
+        }
+    }
+}
+
+function populateDevolucaoInstrumentos() {
+    if (!devolucaoInstrumentoSelect) return;
+    const funcId = devolucaoFuncionarioSelect ? devolucaoFuncionarioSelect.value : '';
+    devolucaoInstrumentoSelect.innerHTML = '<option value="">Selecione instrumento...</option>';
+    if (!funcId) {
+        devolucaoInstrumentoSelect.disabled = true;
+        return;
+    }
+    const ativos = (entregasCache || []).filter(item => item.ativo && String(item.funcionario_id) === funcId);
+    if (!ativos.length) {
+        devolucaoInstrumentoSelect.innerHTML = '<option value="">Nenhum instrumento ativo</option>';
+        devolucaoInstrumentoSelect.disabled = true;
+        return;
+    }
+    ativos.forEach(item => {
+        const label = `${item.instrumento_codigo || '-'} - ${item.instrumento_descricao || ''}`;
+        devolucaoInstrumentoSelect.innerHTML += `<option value="${item.instrumento_id}">${label}</option>`;
+    });
+    devolucaoInstrumentoSelect.disabled = false;
+}
+
+async function submitDevolucao() {
+    const submitBtn = document.getElementById('btnSubmitDevolucao');
+    const originalText = submitBtn ? submitBtn.textContent : '';
+    const funcId = devolucaoFuncionarioSelect ? devolucaoFuncionarioSelect.value : '';
+    const instId = devolucaoInstrumentoSelect ? devolucaoInstrumentoSelect.value : '';
+    if (!funcId) { alert('Selecione o funcionário responsável pela devolução.'); return; }
+    if (!instId) { alert('Selecione o instrumento que será devolvido.'); return; }
+    const dateField = document.getElementById('devolucao_data');
+    const obsField = document.getElementById('devolucao_observacoes');
+    const payload = {
+        funcionario_id: funcId,
+        instrumento_id: instId,
+        observacoes: obsField ? obsField.value.trim() : ''
+    };
+    if (dateField && dateField.value) {
+        const parsed = new Date(dateField.value);
+        if (!isNaN(parsed.getTime())) {
+            payload.data_devolucao = parsed.toISOString();
+        }
+    }
+
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.classList.add('opacity-70');
+        submitBtn.textContent = 'Registrando...';
+    }
+
+    try {
+        const resp = await fetch('/instrumentos/api/devolver/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRF()
+            },
+            body: JSON.stringify(payload)
+        });
+        const result = await resp.json();
+        if (!resp.ok || !result.success) {
+            throw new Error(result.message || 'Falha ao registrar devolução');
+        }
+        alert('Devolução registrada com sucesso');
+        closeDevolucaoModal();
+        await refreshDevolucaoCache(true);
+        await loadEntregas({ pageOverride: entregasPagination.page });
+    } catch (error) {
+        console.error(error);
+        alert(error.message || 'Erro ao registrar devolução');
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-70');
+            submitBtn.textContent = originalText || 'Confirmar devolução';
+        }
+    }
+}
+
+function renderEntregas(list) {
+    const tbody = document.getElementById('entregasBody');
+    if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-3 text-center text-gray-500">Nenhuma entrega encontrada.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = list.map(e => `
+        <tr>
+            <td class="px-4 py-2 text-sm">${e.funcionario || '-'}</td>
+            <td class="px-4 py-2 text-sm">${e.funcionario_matricula || '-'}</td>
+            <td class="px-4 py-2 text-sm">${(e.instrumento_codigo || '-') + ' - ' + (e.instrumento_descricao || '')}</td>
+            <td class="px-4 py-2 text-sm">${e.data_inicio ? new Date(e.data_inicio).toLocaleString() : '-'}</td>
+            <td class="px-4 py-2 text-sm">${e.data_fim ? new Date(e.data_fim).toLocaleString() : '-'}</td>
+            <td class="px-4 py-2 text-sm">${e.ativo ? 'Ativo' : 'Finalizado'}</td>
+            <td class="px-4 py-2 text-sm">${e.observacoes || '-'}</td>
+        </tr>
+    `).join('');
+}
+
+function renderEntregasCsvErrors(errors = []) {
+    const box = document.getElementById('entregasCsvErrors');
+    if (!box) return;
+    if (!errors.length) {
+        box.textContent = '';
+        box.classList.add('hidden');
+        return;
+    }
+    const preview = errors.slice(0, 5).map(err => `Linha ${err.line}: ${err.error}`).join(' | ');
+    const suffix = errors.length > 5 ? ' ...' : '';
+    box.textContent = `${errors.length} linha(s) com erro. ${preview}${suffix}`;
+    box.classList.remove('hidden');
+}
+
+async function handlePendingDesignationPrefill() {
+    let stored = null;
+    try {
+        stored = sessionStorage.getItem(ENTREGA_PREFILL_STORAGE_KEY);
+    } catch (error) {
+        console.warn('Não foi possível ler dados de re-entrega:', error);
+        return;
+    }
+    if (!stored) return;
+    try {
+        sessionStorage.removeItem(ENTREGA_PREFILL_STORAGE_KEY);
+    } catch (error) {
+        console.warn('Não foi possível limpar dados de re-entrega:', error);
+    }
+    let data = null;
+    try {
+        data = JSON.parse(stored);
+    } catch (error) {
+        console.warn('Dados de re-entrega inválidos:', error);
+        return;
+    }
+    await openDesignationModal(data);
+}
+
+async function uploadEntregasCsv() {
+    const input = document.getElementById('entregasCsvInput');
+    if (!input || !input.files.length) {
+        alert('Selecione um arquivo CSV para enviar.');
+        return;
+    }
+    const formData = new FormData();
+    formData.append('file', input.files[0]);
+
+    try {
+        const resp = await fetch('/instrumentos/api/import-entregas/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCSRF() },
+            body: formData,
+        });
+        const result = await resp.json();
+        renderEntregasCsvErrors(result.errors || []);
+        if (!resp.ok || !result.success) {
+            throw new Error(result.message || 'Erro ao importar entregas.');
+        }
+        alert(result.message || 'Importação concluída.');
+        await loadEntregas({ pageOverride: 1, updateFilters: true });
+        await refreshDevolucaoCache(true);
+    } catch (error) {
+        alert(error.message || 'Falha inesperada durante a importação.');
+    } finally {
+        input.value = '';
+    }
+}
+
+const entregasSearchInput = document.getElementById('entregasSearch');
+if (entregasSearchInput) {
+    entregasSearchInput.addEventListener('input', () => {
+        if (entregasSearchTimeout) {
+            clearTimeout(entregasSearchTimeout);
+        }
+        entregasSearchTimeout = setTimeout(() => {
+            loadEntregas({ pageOverride: 1, updateFilters: true });
+        }, 300);
+    });
+}
+
+const entregasStatusSelect = document.getElementById('entregasStatus');
+if (entregasStatusSelect) {
+    entregasStatusSelect.addEventListener('change', () => {
+        loadEntregas({ pageOverride: 1, updateFilters: true });
+    });
+}
+
+const entregasRefreshBtn = document.getElementById('entregasRefresh');
+if (entregasRefreshBtn) {
+    entregasRefreshBtn.addEventListener('click', () => {
+        loadEntregas({ pageOverride: 1, updateFilters: true });
+    });
+}
+if (devolucaoFuncionarioSelect) {
+    devolucaoFuncionarioSelect.addEventListener('change', populateDevolucaoInstrumentos);
+}
+if (devolucaoInstrumentoSelect) {
+    devolucaoInstrumentoSelect.innerHTML = '<option value="">Selecione instrumento...</option>';
+    devolucaoInstrumentoSelect.disabled = true;
+}
+window.addEventListener('DOMContentLoaded', () => {
+    setupEntregasPaginationControls();
+    loadEntregas({ pageOverride: 1, updateFilters: true });
+    refreshDevolucaoCache(true);
+    handlePendingDesignationPrefill();
+});
+</script>
+{% endblock %}

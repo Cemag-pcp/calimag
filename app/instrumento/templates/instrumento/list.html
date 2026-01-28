@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">Instrumentos</h1>
+<table class="min-w-full bg-white">
+  <thead>
+    <tr>
+      <th>Código</th>
+      <th>Descrição</th>
+      <th>Tipo</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for inst in instrumentos %}
+    <tr>
+      <td>{{ inst.codigo }}</td>
+      <td>{{ inst.descricao }}</td>
+      <td>{{ inst.tipo_instrumento.descricao if inst.tipo_instrumento }}</td>
+      <td><a href="{% url 'instrumento:detail' inst.id %}" class="text-blue-600">Ver</a></td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="4">Nenhum instrumento cadastrado.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

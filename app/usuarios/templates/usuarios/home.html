@@ -1,0 +1,1448 @@
+{% extends 'usuarios/base.html' %}
+
+{% block content %}
+    <div class="text-sm space-y-8">
+        <div class="mb-8">
+        <h2 class="text-3xl font-bold text-gray-900 mb-2">Plano mestre de calibração</h2>
+        <p class="text-gray-600"></p>
+    </div>
+
+    <!-- Placeholder Cards para Indicadores -->
+    <section class="mb-10">
+        <div id="indicadoresGrid" class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <article class="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-slate-100 p-5 shadow-sm">
+                <h4 class="mt-2 text-lg font-semibold text-slate-900">Pendente análise</h4>
+                <p class="text-sm text-slate-500">Faixas que voltaram da calibração mas não foram analisadas.</p>
+                <div class="mt-6 flex items-center gap-3">
+                    <div class="flex-1">
+                        <p id="indicadorPontosPendentes" class="text-3xl font-bold text-slate-900">--</p>
+                    </div>
+                </div>
+            </article>
+            <article class="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-slate-100 p-5 shadow-sm">
+                <h4 class="mt-2 text-lg font-semibold text-slate-900">Instrumentos em operação</h4>
+                <p class="text-sm text-slate-500">Instrumentos que estão sobre a responsabilidade de funcionários.</p>
+                <div class="mt-6 flex items-center gap-3">
+                    <div class="flex-1">
+                        <p id="indicadorOperacao" class="text-3xl font-bold text-slate-900">--</p>
+                    </div>
+                </div>
+            </article>
+            <article class="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-slate-100 p-5 shadow-sm">
+                <h4 class="mt-2 text-lg font-semibold text-slate-900">Instrumentos em calibração</h4>
+                <p class="text-sm text-slate-500">Instrumentos que estão em processo de calibração.</p>
+                <div class="mt-6 flex items-center gap-3">
+                    <div class="flex-1">
+                        <p id="indicadorCalibracao" class="text-3xl font-bold text-slate-900">--</p>
+                    </div>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <!-- Tabela de Status de Instrumentos -->
+    <div class="mt-8 bg-white rounded-lg shadow-md p-6">
+        <!-- <h3 class="text-xl font-semibold text-gray-900 mb-4">Status Atual dos Instrumentos</h3> -->
+        <div class="mb-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <form id="instrumentoFilters" class="grid gap-6 text-sm md:grid-cols-2">
+                <section class="space-y-3">
+                    <header class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Identificação</header>
+                    <div class="space-y-3">
+                        <label class="block">
+                            <span class="block text-xs text-gray-600 mb-1">Código ou descrição</span>
+                            <input id="filterSearch" type="text" class="w-full px-2 py-1.5 border border-gray-300 rounded-md" placeholder="Ex.: Micrômetro" />
+                        </label>
+                        <label class="block">
+                            <span class="block text-xs text-gray-600 mb-1">Tipo de instrumento</span>
+                            <select id="filterTipo" class="w-full px-2 py-1.5 border border-gray-300 rounded-md">
+                                <option value="">Todos os tipos</option>
+                            </select>
+                        </label>
+                        <label class="block">
+                            <span class="block text-xs text-gray-600 mb-1">Instrumento controlado</span>
+                            <select id="filterInstrumentoControlado" class="w-full px-2 py-1.5 border border-gray-300 rounded-md">
+                                <option value="">Todos</option>
+                                <option value="1">Apenas controlados</option>
+                                <option value="0">Apenas não controlados</option>
+                            </select>
+                        </label>
+                        <label class="block">
+                            <span class="block text-xs text-gray-600 mb-1">Funcionário</span>
+                            <input id="filterFuncionario" type="text" class="w-full px-2 py-1.5 border border-gray-300 rounded-md" placeholder="Nome do colaborador" />
+                        </label>
+                    </div>
+                </section>
+                <section class="space-y-3">
+                    <header class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</header>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <label class="block">
+                            <span class="block text-xs text-gray-600 mb-1">Tipo de atualização</span>
+                            <select id="filterSituacao" class="w-full px-2 py-1.5 border border-gray-300 rounded-md">
+                                <option value="">Todas</option>
+                                <option value="entregue">Entregue ao funcionário</option>
+                                <option value="enviado">Enviado ao laboratório</option>
+                                <option value="recebido">Recebido da calibração</option>
+                            </select>
+                        </label>
+                        <label class="block">
+                            <span class="block text-xs text-gray-600 mb-1">Status da calibração</span>
+                            <select id="filterStatusCalibracao" class="w-full px-2 py-1.5 border border-gray-300 rounded-md">
+                                <option value="">Todos</option>
+                                <option value="em_dia">Em dia</option>
+                                <option value="atrasado">Atrasado</option>
+                                <option value="sem_analise">Sem análise</option>
+                            </select>
+                        </label>
+                    </div>
+                    <label class="mt-2 flex items-center gap-2 text-xs text-gray-600">
+                        <input id="filterPontosPendentes" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                        <span>Mostrar apenas instrumentos com pontos pendentes</span>
+                    </label>
+                    <div class="mt-2">
+                        <span class="block text-xs text-gray-600 mb-1">Validade</span>
+                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <label class="block">
+                                <span class="text-xs text-gray-500">De</span>
+                                <input id="filterValidadeInicio" type="date" class="mt-1 w-full px-2 py-1.5 border border-gray-300 rounded-md" />
+                            </label>
+                            <label class="block">
+                                <span class="text-xs text-gray-500">Até</span>
+                                <input id="filterValidadeFim" type="date" class="mt-1 w-full px-2 py-1.5 border border-gray-300 rounded-md" />
+                            </label>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap justify-end gap-3 pt-2">
+                        <!-- <button id="clearFiltersBtn" type="button" class="px-4 py-2 border border-gray-300 rounded-lg text-sm">Limpar filtros</button> -->
+                        <button id="applyFiltersBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm">Aplicar filtros</button>
+                    </div>
+                </section>
+            </form>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Código</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Instrumento controlado</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Funcionário</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Última atualização</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status da calibração</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pontos analisados</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Última calibração</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Válido até</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Último certificado</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="homeInstrumentosTable" class="bg-white divide-y divide-gray-200"></tbody>
+            </table>
+        </div>
+        <div class="mt-4 flex flex-col gap-3 border-t border-gray-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <p id="homePaginationInfo" class="text-sm text-gray-600">Carregando...</p>
+            <div class="flex gap-2">
+                <button id="homePrevPage" class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 disabled:opacity-50" disabled>Anterior</button>
+                <button id="homeNextPage" class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 disabled:opacity-50" disabled>Próximo</button>
+            </div>
+        </div>
+    </div>
+    </div>
+
+<script>
+const HOME_PAGE_SIZE = 15;
+const ENTREGA_PREFILL_STORAGE_KEY = 'calibracao_entrega_prefill';
+async function loadIndicadoresDashboard() {
+    const pontosEl = document.getElementById('indicadorPontosPendentes');
+    const operacaoEl = document.getElementById('indicadorOperacao');
+    const calibracaoEl = document.getElementById('indicadorCalibracao');
+    if (!pontosEl || !operacaoEl || !calibracaoEl) return;
+    try {
+        const resp = await fetch('/instrumentos/api/indicadores/');
+        const data = await resp.json();
+        const formatNumber = (value) => {
+            if (typeof value !== 'number') return '--';
+            return value.toLocaleString('pt-BR');
+        };
+        pontosEl.textContent = formatNumber(data.pontos_pendentes);
+        operacaoEl.textContent = formatNumber(data.instrumentos_operacao);
+        calibracaoEl.textContent = formatNumber(data.instrumentos_calibracao);
+    } catch (error) {
+        console.error('Erro ao carregar indicadores:', error);
+        pontosEl.textContent = '—';
+        operacaoEl.textContent = '—';
+        calibracaoEl.textContent = '—';
+    }
+}
+
+const isSentToLaboratorio = (status) => status && (status.startsWith('Enviado ao laboratório') || status.startsWith('Enviado ao laboratório'));
+let currentFilters = {};
+let homeCurrentPage = 1;
+let homePagination = { page: 1, pages: 1, total: 0 };
+
+function emphasizeStatusPrefix(text) {
+    if (!text) return '-';
+    const trimmed = text.trim();
+    if (!trimmed || trimmed === '-') return '-';
+    const match = trimmed.match(/^([A-Za-zÀ-ÖØ-öø-ÿ]+)/);
+    if (!match) return trimmed;
+    const prefix = match[1];
+    const remainder = trimmed.slice(prefix.length);
+    return `<span class="font-semibold text-indigo-600">${prefix}</span>${remainder}`;
+}
+
+function buildInstrumentRow(inst) {
+    const isSent = inst.status_obj && isSentToLaboratorio(inst.status_obj.tipo_status) && !inst.status_obj.data_devolucao;
+    const isReceivable = inst.status_obj && isSentToLaboratorio(inst.status_obj.tipo_status) && !inst.status_obj.data_recebimento;
+    const isAnalyzable = inst.status_obj && ((inst.status_obj.tipo_status && inst.status_obj.tipo_status.startsWith('Recebido')) || Boolean(inst.status_obj.data_recebimento));
+    const hasActiveFuncionario = Boolean(
+        inst.status_obj &&
+        inst.status_obj.funcionario &&
+        !inst.status_obj.data_devolucao &&
+        inst.status_obj.tipo_status &&
+        inst.status_obj.tipo_status.startsWith('Entregue ao funcionário')
+    );
+    const jaFoiEnviado = Boolean(inst.has_status_pontos || inst.data_ultimo_envio);
+    const primeiroEnvio = !jaFoiEnviado;
+    const semPendencias = inst.pontos_ultima_calibracao_analisados === true;
+    const podeMostrarEnviar =
+        !isSent &&
+        (
+            primeiroEnvio ||
+            (jaFoiEnviado && semPendencias)
+        );
+    const enviarDisabled = !podeMostrarEnviar;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const statusKey = inst.calibration_status || null;
+    let statusBadge = { text: 'Sem análise', cls: 'bg-gray-100 text-gray-700' };
+    if (statusKey === 'em_dia') {
+        statusBadge = { text: 'Em dia', cls: 'bg-emerald-100 text-emerald-800' };
+    } else if (statusKey === 'atrasado') {
+        statusBadge = { text: 'Atrasado', cls: 'bg-red-100 text-red-800' };
+    } else if (statusKey === 'sem_analise') {
+        statusBadge = { text: 'Sem análise', cls: 'bg-gray-100 text-gray-700' };
+    } else if (inst.valid_until) {
+        const validDate = new Date(inst.valid_until);
+        if (!Number.isNaN(validDate.getTime())) {
+            const compareDate = new Date(validDate.getFullYear(), validDate.getMonth(), validDate.getDate());
+            const emDia = compareDate >= today;
+            statusBadge = emDia
+                ? { text: 'Em dia', cls: 'bg-emerald-100 text-emerald-800' }
+                : { text: 'Atrasado', cls: 'bg-red-100 text-red-800' };
+        }
+    }
+
+    const hasPendingPoints = inst.pontos_ultima_calibracao_analisados === false;
+    const pontosBadge = hasPendingPoints
+        ? { text: 'Pendentes', cls: 'bg-amber-100 text-amber-800' }
+        : { text: 'OK', cls: 'bg-gray-100 text-gray-700' };
+    const controlBadge = inst.instrumento_controlado
+        ? { text: 'Sim', cls: 'bg-indigo-100 text-indigo-800' }
+        : { text: 'Não', cls: 'bg-gray-100 text-gray-700' };
+
+    const rawUpdateText = hasActiveFuncionario
+        ? `Entregue para: ${inst.status_obj.funcionario}`
+        : (inst.status || '-');
+    const formattedUpdateText = emphasizeStatusPrefix(rawUpdateText);
+
+    return `
+        <tr class="hover:bg-gray-50" id="inst-row-${inst.id}">
+            <td class="px-6 py-4">${inst.codigo}</td>
+            <td class="px-6 py-4">${inst.tipo || '-'}</td>
+            <td class="px-6 py-4">
+                <span class="px-2 py-1 text-xs font-semibold rounded-full ${controlBadge.cls}">${controlBadge.text}</span>
+            </td>
+            <td class="px-6 py-4">${hasActiveFuncionario ? inst.status_obj.funcionario : '-'}</td>
+            <td class="px-6 py-4">
+                ${formattedUpdateText}
+            </td>
+            <td class="px-6 py-4">
+                <span class="px-2 py-1 text-xs font-semibold rounded-full ${statusBadge.cls}">${statusBadge.text}</span>
+            </td>
+            <td class="px-6 py-4">
+                <span class="px-2 py-1 text-xs font-semibold rounded-full ${pontosBadge.cls}">${pontosBadge.text}</span>
+            </td>
+            <td class="px-6 py-4">${inst.ultima_calibracao ? new Date(inst.ultima_calibracao).toLocaleDateString() : '-'}</td>
+            <td class="px-6 py-4">${inst.valid_until ? new Date(inst.valid_until).toLocaleDateString() : '-'}</td>
+            <td class="px-6 py-4">
+                ${inst.ultimo_certificado
+                    ? `<a class="text-indigo-600 hover:text-indigo-800 underline" href="${inst.ultimo_certificado}" target="_blank" rel="noopener noreferrer">Abrir certificado</a>`
+                    : '-'}
+            </td>
+            <td class="px-6 py-4 text-right">
+                <div class="inline-flex items-center gap-2">
+                    <button onclick="togglePontos(${inst.id})" class="inline-flex items-center justify-center rounded-md border border-gray-300 shadow-sm px-2 py-1 bg-white text-sm text-blue-600 hover:bg-gray-50">
+                        Faixas de calibração
+                    </button>
+                    <div class="relative inline-block text-left">
+                        <button type="button" class="inline-flex items-center justify-center rounded-md border border-gray-300 shadow-sm px-2 py-1 bg-white text-sm text-gray-700 hover:bg-gray-50" aria-expanded="false" aria-haspopup="true" data-menu-toggle="${inst.id}" aria-label="Abrir menu">
+                            <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </button>
+
+                        <div id="menu-${inst.id}" class="w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 hidden z-50" data-floating-menu>
+                            <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
+                                <button
+                                    ${enviarDisabled ? 'disabled aria-disabled="true"' : ''}
+                                    class="w-full text-left px-4 py-2 text-sm ${
+                                        enviarDisabled
+                                            ? 'text-gray-400 cursor-not-allowed'
+                                            : 'text-gray-700 hover:bg-gray-100'
+                                    }"
+                                    data-action="enviar">Enviar p/ calibração
+                                </button>
+                                <button ${isReceivable ? '' : 'disabled'} class="${isReceivable ? 'w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100' : 'w-full text-left px-4 py-2 text-sm text-gray-400 cursor-not-allowed'}" data-action="receber">Receber da calibração</button>
+                                <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-action="historico">Ver histórico</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+        <tr id="inst-pontos-${inst.id}" class="hidden">
+            <td colspan="11" class="px-6 py-4 bg-gray-50" id="inst-pontos-container-${inst.id}" data-analyzable="${isAnalyzable ? '1' : '0'}" data-last-envio="${inst.data_ultimo_envio || ''}"></td>
+        </tr>
+    `;
+}
+
+function showHomeTableLoading() {
+    const tbody = document.getElementById('homeInstrumentosTable');
+    if (!tbody) return;
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="11" class="px-6 py-8 text-center">
+                <div class="flex flex-col items-center gap-3 text-gray-500">
+                    <svg class="h-6 w-6 animate-spin text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                    </svg>
+                    <span class="text-sm">Aplicando filtros...</span>
+                </div>
+            </td>
+        </tr>`;
+}
+
+async function loadHomeInstrumentos(passedFilters, pageOverride) {
+    try {
+        const filters = passedFilters ? { ...passedFilters } : { ...currentFilters };
+        currentFilters = { ...filters };
+        if (typeof pageOverride === 'number' && !Number.isNaN(pageOverride)) {
+            homeCurrentPage = Math.max(1, pageOverride);
+        }
+        const params = new URLSearchParams();
+        params.append('page', homeCurrentPage);
+        params.append('per_page', HOME_PAGE_SIZE);
+        let hasActiveFilters = false;
+        Object.entries(filters).forEach(([key, value]) => {
+            if (value !== undefined && value !== null && value !== '') {
+                params.append(key, value);
+                hasActiveFilters = true;
+            }
+        });
+        const resp = await fetch(`/instrumentos/api/status/?${params.toString()}`);
+        const data = await resp.json();
+        const tbody = document.getElementById('homeInstrumentosTable');
+        if (!tbody) return;
+        homePagination = data.pagination || { page: homeCurrentPage, pages: 1, total: (data.instrumentos || []).length };
+        homeCurrentPage = homePagination.page || homeCurrentPage;
+        const instrumentos = data.instrumentos || [];
+        if (!instrumentos.length) {
+            const emptyMessage = hasActiveFilters
+                ? 'Nenhum instrumento encontrado para os filtros selecionados.'
+                : 'Nenhum instrumento cadastrado.';
+            tbody.innerHTML = `<tr><td colspan="11" class="px-6 py-4 text-center text-gray-500">${emptyMessage}</td></tr>`;
+            renderHomePagination();
+            return;
+        }
+        tbody.innerHTML = instrumentos.map(buildInstrumentRow).join('');
+        renderHomePagination();
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+function renderHomePagination() {
+    const info = document.getElementById('homePaginationInfo');
+    if (info) {
+        const page = homePagination?.page || 1;
+        const pages = homePagination?.pages || 1;
+        const total = homePagination?.total || 0;
+        info.textContent = total
+            ? `Página ${page} de ${pages} — ${total} instrumento(s)`
+            : 'Nenhum instrumento encontrado';
+    }
+    const prevBtn = document.getElementById('homePrevPage');
+    if (prevBtn) {
+        prevBtn.disabled = !(homePagination && homePagination.page > 1);
+    }
+    const nextBtn = document.getElementById('homeNextPage');
+    if (nextBtn) {
+        nextBtn.disabled = !(homePagination && homePagination.page < homePagination.pages);
+    }
+}
+
+function setupHomePaginationControls() {
+    const prevBtn = document.getElementById('homePrevPage');
+    if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+            if (homePagination && homePagination.page > 1) {
+                loadHomeInstrumentos(undefined, homePagination.page - 1);
+            }
+        });
+    }
+    const nextBtn = document.getElementById('homeNextPage');
+    if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+            if (homePagination && homePagination.page < homePagination.pages) {
+                loadHomeInstrumentos(undefined, homePagination.page + 1);
+            }
+        });
+    }
+}
+
+async function populateTipoFilter() {
+    const select = document.getElementById('filterTipo');
+    if (!select) return;
+    try {
+        const resp = await fetch('/cadastro/api/tipos_instrumento/');
+        const data = await resp.json();
+        const tipos = data.tipos || [];
+        tipos.forEach(tipo => {
+            const opt = document.createElement('option');
+            opt.value = tipo.id;
+            opt.textContent = tipo.descricao;
+            select.appendChild(opt);
+        });
+    } catch (error) {
+        console.error('Erro ao carregar tipos de instrumento:', error);
+    }
+}
+
+function getFiltersFromForm() {
+    const filters = {};
+    const search = document.getElementById('filterSearch');
+    const situacao = document.getElementById('filterSituacao');
+    const statusCal = document.getElementById('filterStatusCalibracao');
+    const tipo = document.getElementById('filterTipo');
+    const controlado = document.getElementById('filterInstrumentoControlado');
+    const funcionario = document.getElementById('filterFuncionario');
+    const validadeInicio = document.getElementById('filterValidadeInicio');
+    const validadeFim = document.getElementById('filterValidadeFim');
+    const pontosPendentes = document.getElementById('filterPontosPendentes');
+
+    if (search && search.value.trim()) filters.search = search.value.trim();
+    if (situacao && situacao.value) filters.situacao = situacao.value;
+    if (statusCal && statusCal.value) filters.status_calibracao = statusCal.value;
+    if (tipo && tipo.value) filters.tipo_id = tipo.value;
+    if (controlado && controlado.value !== '') filters.instrumento_controlado = controlado.value;
+    if (validadeInicio && validadeInicio.value) filters.validade_inicio = validadeInicio.value;
+    if (validadeFim && validadeFim.value) filters.validade_fim = validadeFim.value;
+    if (funcionario && funcionario.value.trim()) filters.funcionario = funcionario.value.trim();
+    if (pontosPendentes && pontosPendentes.checked) filters.pendencias_pontos = '1';
+
+    return filters;
+}
+
+function attachFilterHandlers() {
+    const form = document.getElementById('instrumentoFilters');
+    if (form) {
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            currentFilters = getFiltersFromForm();
+            homeCurrentPage = 1;
+            loadHomeInstrumentos();
+        });
+    }
+
+    const applyBtn = document.getElementById('applyFiltersBtn');
+    if (applyBtn) {
+        applyBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            currentFilters = getFiltersFromForm();
+            homeCurrentPage = 1;
+            showHomeTableLoading();
+            loadHomeInstrumentos();
+        });
+    }
+
+    const clearBtn = document.getElementById('clearFiltersBtn');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            if (form) form.reset();
+            currentFilters = {};
+            homeCurrentPage = 1;
+            loadHomeInstrumentos();
+        });
+    }
+}
+
+async function initHomeDashboard() {
+    await populateTipoFilter();
+    attachFilterHandlers();
+    setupHomePaginationControls();
+    loadIndicadoresDashboard();
+    await loadHomeInstrumentos();
+}
+
+async function fillPontosTable(instId, container) {
+    try {
+        const resp = await fetch(`/cadastro/api/instrumentos/${instId}/pontos/only-ativo/`);
+        const data = await resp.json();
+        if (!data.pontos || data.pontos.length === 0) {
+            container.innerHTML = '<div class="text-sm text-gray-600">Nenhum ponto cadastrado para este instrumento.</div>';
+            return;
+        }
+        const analyzable = container.dataset.analyzable === '1';
+        const lastEnvioISO = container.dataset.lastEnvio;
+        const lastEnvioDateRaw = lastEnvioISO ? new Date(lastEnvioISO) : null;
+        const lastEnvioValid = lastEnvioDateRaw && !Number.isNaN(lastEnvioDateRaw.getTime());
+        container.innerHTML = `
+            <table class="min-w-full">
+                <thead class="text-xs text-gray-500">
+                <tr>
+                    <th class="px-3 py-2 text-left">Seq</th>
+                    <th class="px-3 py-2 text-left">Descrição</th>
+                    <th class="px-3 py-2 text-left">Valor</th>
+                    <th class="px-3 py-2 text-left">Data Última Análise</th>
+                    <th class="px-3 py-2 text-left">Incerteza Última</th>
+                    <th class="px-3 py-2 text-left">Tendência Última</th>
+                    <th class="px-3 py-2 text-left">Resultado Última</th>
+                    <th class="px-3 py-2 text-right">Ações</th>
+                </tr>
+                </thead>
+                <tbody>
+                ${data.pontos.map(p => {
+                    const ultimaAnaliseDateRaw = p.ultima_data_analise ? new Date(p.ultima_data_analise) : null;
+                    const ultimaAnaliseValid = ultimaAnaliseDateRaw && !Number.isNaN(ultimaAnaliseDateRaw.getTime());
+                    const needsAnalysis = analyzable && (
+                        !ultimaAnaliseValid ||
+                        (lastEnvioValid && ultimaAnaliseDateRaw < lastEnvioDateRaw)
+                    );
+                    const resultadoBadge = (() => {
+                        if (!p.ultima_resultado) return '-';
+                        const normalized = String(p.ultima_resultado).toLowerCase();
+                        if (normalized === 'aprovado') {
+                            return '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">Aprovado</span>';
+                        }
+                        if (normalized === 'reprovado') {
+                            return '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800">Reprovado</span>';
+                        }
+                        return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">${p.ultima_resultado}</span>`;
+                    })();
+                    return `
+                    <tr class="border-t">
+                        <td class="px-3 py-2">${p.sequencia}</td>
+                        <td class="px-3 py-2">${p.descricao}</td>
+                        <td class="px-3 py-2">${p.valor_nominal} ${p.unidade}</td>
+                        <td class="px-3 py-2">
+                            ${p.ultima_data_analise ? new Date(p.ultima_data_analise).toLocaleString() : '-'}
+                        </td>
+                        <td class="px-3 py-2">${p.ultima_incerteza || '-'}
+                        </td>
+                        <td class="px-3 py-2">${p.ultima_tendencia || '-'}</td>
+                        <td class="px-3 py-2">
+                            ${resultadoBadge}
+                        </td>
+                        <td class="px-3 py-2 text-right">
+                            ${needsAnalysis
+                                ? `<button class="px-2 py-1 text-sm text-blue-600 hover:underline analisarPontoBtn"
+                                    data-instrumento-id="${instId}" data-ponto-id="${p.id}"
+                                    data-valor-min="${p.valor_nominal_minimo ?? ''}" data-valor-max="${p.valor_nominal_maximo ?? ''}"
+                                    data-unidade="${p.unidade || ''}" data-tolerancia-mais="${p.tolerancia_mais || ''}" data-tolerancia-menos="${p.tolerancia_menos || ''}">
+                                    Analisar
+                                </button>`
+                                : ''}
+                        </td>
+                    </tr>
+                `; }).join('')}
+                </tbody>
+            </table>
+        `;
+    } catch (e) {
+        container.innerHTML = '<div class="text-sm text-red-600">Erro ao carregar pontos.</div>';
+        console.error(e);
+    }
+}
+
+async function togglePontos(instId) {
+    const row = document.getElementById(`inst-pontos-${instId}`);
+    const container = document.getElementById(`inst-pontos-container-${instId}`);
+    if (!row || !container) return;
+
+    const isVisible = !row.classList.contains('hidden');
+    document.querySelectorAll('tr[id^="inst-pontos-"]').forEach(other => {
+        if (other !== row) {
+            other.classList.add('hidden');
+        }
+    });
+
+    if (isVisible) {
+        row.classList.add('hidden');
+        return;
+    }
+
+    container.classList.remove('hidden');
+    container.innerHTML = '<div class="text-sm text-gray-500">Carregando pontos...</div>';
+    row.classList.remove('hidden');
+    try {
+        await fillPontosTable(instId, container);
+    } catch (error) {
+        console.error('Erro ao carregar pontos:', error);
+        container.innerHTML = '<div class="text-sm text-red-600">Erro ao carregar pontos.</div>';
+    }
+}
+
+async function refreshHomeInstrument(instId) {
+    try {
+        const params = new URLSearchParams();
+        params.append('instrumento_id', instId);
+        params.append('page', homeCurrentPage);
+        params.append('per_page', HOME_PAGE_SIZE);
+        Object.entries(currentFilters).forEach(([key, value]) => {
+            if (value !== undefined && value !== null && value !== '') {
+                params.append(key, value);
+            }
+        });
+        const resp = await fetch(`/instrumentos/api/status/?${params.toString()}`);
+        const data = await resp.json();
+        const instList = data.instrumentos || [];
+        const inst = instList.find(item => String(item.id) === String(instId));
+        if (!inst) {
+            await loadHomeInstrumentos();
+            return;
+        }
+
+        const row = document.getElementById(`inst-row-${inst.id}`);
+        const pontosRow = document.getElementById(`inst-pontos-${inst.id}`);
+        if (!row || !pontosRow) return;
+
+        const wasOpen = !pontosRow.classList.contains('hidden');
+        const parent = row.parentElement;
+        const temp = document.createElement('tbody');
+        temp.innerHTML = buildInstrumentRow(inst);
+        const newRow = temp.querySelector(`#inst-row-${inst.id}`);
+        const newPontosRow = temp.querySelector(`#inst-pontos-${inst.id}`);
+        parent.insertBefore(newRow, row);
+        parent.insertBefore(newPontosRow, pontosRow);
+        row.remove();
+        pontosRow.remove();
+
+        if (wasOpen) {
+            const container = document.getElementById(`inst-pontos-container-${inst.id}`);
+            if (container) {
+                container.innerHTML = '<div class="text-sm text-gray-500">Atualizando pontos...</div>';
+                await fillPontosTable(inst.id, container);
+                document.getElementById(`inst-pontos-${inst.id}`).classList.remove('hidden');
+            }
+        }
+    } catch (e) {
+        console.error('Erro ao atualizar instrumento:', e);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initHomeDashboard();
+});
+
+// Menu toggle behavior for per-row dropdowns
+document.addEventListener('click', function(e){
+    const toggle = e.target.closest('[data-menu-toggle]');
+    if (toggle){
+        const id = toggle.getAttribute('data-menu-toggle');
+        const menu = document.getElementById(`menu-${id}`);
+        if (!menu) return;
+
+        document.querySelectorAll('[id^="menu-"]').forEach(m => {
+            if (m.id !== `menu-${id}`) m.classList.add('hidden');
+        });
+
+        const rect = toggle.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+
+        const wasHidden = menu.classList.contains('hidden');
+        if (wasHidden) menu.classList.remove('hidden');
+        menu.style.visibility = 'hidden';
+        menu.style.position = 'fixed';
+        menu.style.zIndex = '1000';
+
+        const menuWidth = menu.offsetWidth || 224;
+        const menuHeight = menu.offsetHeight || 240;
+
+        let left = rect.left;
+        if (left + menuWidth > viewportWidth) left = Math.max(8, viewportWidth - menuWidth - 8);
+        if (left < 8) left = 8;
+
+        let top = rect.bottom + 6;
+        const bottomOverflow = top + menuHeight > viewportHeight;
+        if (bottomOverflow) {
+            top = rect.top - menuHeight - 6;
+        }
+        if (top < 8) top = 8;
+
+        menu.style.left = `${left}px`;
+        menu.style.top = `${top}px`;
+        menu.style.maxHeight = `${Math.max(120, viewportHeight - 16)}px`;
+        menu.style.overflowY = 'auto';
+        menu.style.visibility = '';
+
+        if (!wasHidden) {
+            menu.classList.add('hidden');
+            menu.style.visibility = '';
+            menu.style.overflowY = '';
+            menu.style.maxHeight = '';
+        }
+
+        return;
+    }
+
+    if (e.target.closest('[data-floating-menu] button')){
+        document.querySelectorAll('[id^="menu-"]').forEach(m => m.classList.add('hidden'));
+        return;
+    }
+
+    if (!e.target.closest('[data-floating-menu]')){
+        document.querySelectorAll('[id^="menu-"]').forEach(m => m.classList.add('hidden'));
+    }
+});
+
+// handler for the 'Analisar' quick button
+document.addEventListener('click', function(e){
+    const ab = e.target.closest('.analisarBtn');
+    if (!ab) return;
+    const id = ab.getAttribute('data-id');
+    if (!id) return;
+    const menu = document.getElementById(`menu-${id}`);
+    if (menu){
+        const certBtn = menu.querySelector('button[data-action="certificado"]');
+        if (certBtn){
+            certBtn.click();
+            return;
+        }
+    }
+    window.location.href = `/instrumentos/${id}/`;
+});
+</script>
+<!-- Modal Receber da Calibração (home) -->
+<div id="modalReceberHome" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-lg bg-white">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold">Receber da Calibração</h3>
+            <button onclick="closeReceberModalHome()" class="text-gray-400 hover:text-gray-600">✕</button>
+        </div>
+        <input type="hidden" id="receberInstrumentoIdHome">
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Link do Certificado *</label>
+                <input id="receberLinkHome" type="url" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="https://..." />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Data de Recebimento</label>
+                <input id="receberDataHome" type="datetime-local" class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Observações (opcional)</label>
+                <textarea id="receberObsHome" class="w-full px-3 py-2 border border-gray-300 rounded-lg" rows="3"></textarea>
+            </div>
+            <div class="flex justify-end space-x-3 pt-4 border-t">
+                <button onclick="closeReceberModalHome()" class="px-4 py-2 border border-gray-300 rounded-lg">Cancelar</button>
+                <button id="btnConfirmReceberHome" class="px-6 py-2 bg-blue-600 text-white rounded-lg">Confirmar Recebimento</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Reentrega Prompt (home)
+<div id="modalReentregaPrompt" class="hidden fixed inset-0 bg-gray-700 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-24 mx-auto w-full max-w-xl rounded-lg bg-white p-6 shadow-xl">
+        <div class="flex items-start justify-between gap-4">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-amber-500">Atenção</p>
+                <h4 class="text-xl font-bold text-gray-900">Reatribuir ao último responsável?</h4>
+            </div>
+            <button id="btnReentregaClose" class="text-gray-400 transition hover:text-gray-600">✕</button>
+        </div>
+        <p id="reentregaPromptMessage" class="mt-4 text-sm leading-relaxed text-gray-700"></p>
+        <div class="mt-6 flex flex-wrap justify-end gap-3">
+            <button id="btnReentregaSkip" class="px-4 py-2 text-sm text-gray-700 transition border border-gray-300 rounded-lg hover:bg-gray-50">Não, apenas receber</button>
+            <button id="btnReentregaConfirm" class="px-4 py-2 text-sm text-white transition bg-indigo-600 rounded-lg hover:bg-indigo-700">Sim, reatribuir</button>
+        </div>
+    </div>
+</div> -->
+
+<script>
+let pendingReceberPayload = null;
+let pendingReentregaInfo = null;
+let isSubmittingReceber = false;
+
+function openReceberModalHome(instrumentoId){
+    document.getElementById('receberInstrumentoIdHome').value = instrumentoId;
+    document.getElementById('modalReceberHome').classList.remove('hidden');
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    document.getElementById('receberDataHome').value = now.toISOString().slice(0,16);
+}
+
+function closeReceberModalHome(){
+    const modal = document.getElementById('modalReceberHome');
+    if (modal) modal.classList.add('hidden');
+}
+
+function setReceberButtonLoading(state){
+    const btn = document.getElementById('btnConfirmReceberHome');
+    if (!btn) return;
+    btn.disabled = state;
+    btn.classList.toggle('opacity-70', state);
+}
+
+function resetReceberState(){
+    pendingReceberPayload = null;
+    pendingReentregaInfo = null;
+}
+
+function buildReceberPayload(){
+    const instrumentoField = document.getElementById('receberInstrumentoIdHome');
+    const linkField = document.getElementById('receberLinkHome');
+    const dataField = document.getElementById('receberDataHome');
+    const obsField = document.getElementById('receberObsHome');
+    if (!instrumentoField || !linkField) {
+        alert('Instrumento inválido para recebimento.');
+        return null;
+    }
+    const instrumentoId = instrumentoField.value;
+    if (!instrumentoId) {
+        alert('Instrumento inválido para recebimento.');
+        return null;
+    }
+    const linkValue = (linkField.value || '').trim();
+    if (!linkValue) {
+        alert('O campo Link do Certificado é obrigatório');
+        return null;
+    }
+    const payload = {
+        instrumento_id: instrumentoId,
+        link: linkValue,
+        observacoes: (obsField ? obsField.value : '') || ''
+    };
+    if (dataField && dataField.value) {
+        const parsed = new Date(dataField.value);
+        if (!Number.isNaN(parsed.getTime())) {
+            payload.data_recebimento = parsed.toISOString();
+        }
+    }
+    return payload;
+}
+
+async function fetchUltimoResponsavel(instrumentoId){
+    if (!instrumentoId) return null;
+    try {
+        const resp = await fetch(`/instrumentos/api/ultimo-responsavel/${instrumentoId}/`);
+        if (!resp.ok) return null;
+        const data = await resp.json();
+        return data.responsavel || null;
+    } catch (error) {
+        console.warn('Erro ao consultar último responsável:', error);
+        return null;
+    }
+}
+
+function buildReentregaMessage(info){
+    const message = document.getElementById('reentregaPromptMessage');
+    if (!message) return;
+    const funcionarioNome = info.funcionario_nome || 'o colaborador anterior';
+    const codigo = info.instrumento_codigo || '';
+    const descricao = info.instrumento_descricao || '';
+    const instrumentoLabel = codigo ? `${codigo}${descricao ? ' - ' + descricao : ''}` : 'o instrumento';
+    message.innerHTML = '';
+    const prefix = document.createElement('span');
+    prefix.textContent = `Atenção! O último usuário antes de enviar ${instrumentoLabel} ao laboratório era `;
+    const destaque = document.createElement('span');
+    destaque.className = 'font-semibold text-indigo-600';
+    destaque.textContent = funcionarioNome;
+    const suffix = document.createElement('span');
+    suffix.textContent = '. Você deseja reatribuir para ele?';
+    message.append(prefix, destaque, suffix);
+}
+
+// function openReentregaPrompt(info){
+//     buildReentregaMessage(info);
+//     const modal = document.getElementById('modalReentregaPrompt');
+//     if (modal) modal.classList.remove('hidden');
+// }
+
+// function closeReentregaPrompt(resetState = false){
+//     const modal = document.getElementById('modalReentregaPrompt');
+//     if (modal) modal.classList.add('hidden');
+//     if (resetState) {
+//         resetReceberState();
+//     }
+// }
+
+function redirectToEntregasWithPrefill(info){
+    if (!info) return;
+    const payload = {
+        instrumento_id: info.instrumento_id,
+        instrumento_codigo: info.instrumento_codigo || '',
+        instrumento_descricao: info.instrumento_descricao || '',
+        funcionario_id: info.funcionario_id,
+        funcionario_nome: info.funcionario_nome || '',
+        funcionario_matricula: info.funcionario_matricula || ''
+    };
+    try {
+        sessionStorage.setItem(ENTREGA_PREFILL_STORAGE_KEY, JSON.stringify(payload));
+    } catch (error) {
+        console.warn('Não foi possível armazenar o prefill de entregas.', error);
+    }
+    window.location.href = '/entregas/?from=recebimento';
+}
+
+async function submitReceber(payload, options = {}){
+    if (!payload || isSubmittingReceber) return;
+    const { shouldRedirect = false } = options;
+    isSubmittingReceber = true;
+    setReceberButtonLoading(true);
+    try {
+        const res = await fetch('/instrumentos/api/receber/', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json','X-CSRFToken': getCSRF()},
+            body: JSON.stringify(payload)
+        });
+        const j = await res.json();
+        if (j.success) {
+            closeReceberModalHome();
+            if (shouldRedirect && pendingReentregaInfo) {
+                redirectToEntregasWithPrefill(pendingReentregaInfo);
+                return;
+            }
+            alert(j.message || 'Recebido');
+            await loadHomeInstrumentos();
+        } else {
+            alert(j.message || 'Erro ao receber');
+        }
+    } catch (error) {
+        console.error('Erro ao receber instrumento:', error);
+        alert('Erro ao receber instrumento.');
+    } finally {
+        setReceberButtonLoading(false);
+        isSubmittingReceber = false;
+        resetReceberState();
+    }
+}
+
+// open receive modal when menu action 'receber' is clicked
+document.addEventListener('click', function(e){
+    const btn = e.target.closest('button[data-action="receber"]');
+    if (!btn) return;
+    if (btn.disabled) return;
+    const menu = btn.closest('[id^="menu-"]');
+    if (!menu) return;
+    const parts = menu.id.split('-');
+    const instId = parts.length>1 ? parts[1] : null;
+    if (!instId) return;
+    openReceberModalHome(instId);
+});
+
+const confirmarReceberBtn = document.getElementById('btnConfirmReceberHome');
+if (confirmarReceberBtn) {
+    confirmarReceberBtn.addEventListener('click', async () => {
+        const payload = buildReceberPayload();
+        if (!payload) return;
+        pendingReceberPayload = payload;
+        // const info = await fetchUltimoResponsavel(payload.instrumento_id);
+        // if (info && info.funcionario_id) {
+        //     pendingReentregaInfo = info;
+        //     openReentregaPrompt(info);
+        //     return;
+        // }
+        await submitReceber(payload);
+    });
+}
+
+// const reentregaSkipBtn = document.getElementById('btnReentregaSkip');
+// if (reentregaSkipBtn) {
+//     reentregaSkipBtn.addEventListener('click', async () => {
+//         closeReentregaPrompt();
+//         if (pendingReceberPayload) {
+//             await submitReceber(pendingReceberPayload);
+//         }
+//     });
+// }
+
+// const reentregaConfirmBtn = document.getElementById('btnReentregaConfirm');
+// if (reentregaConfirmBtn) {
+//     reentregaConfirmBtn.addEventListener('click', async () => {
+//         closeReentregaPrompt();
+//         if (pendingReceberPayload) {
+//             await submitReceber(pendingReceberPayload, { shouldRedirect: true });
+//         }
+//     });
+// }
+
+// const reentregaCloseBtn = document.getElementById('btnReentregaClose');
+// if (reentregaCloseBtn) {
+//     reentregaCloseBtn.addEventListener('click', () => {
+//         closeReentregaPrompt(true);
+//     });
+// }
+</script>
+<script>
+// handler for per-point 'Analisar' buttons in home pontos table
+document.addEventListener('click', function(e){
+    const btn = e.target.closest('.analisarPontoBtn');
+    if (!btn) return;
+    const instrumentoId = btn.getAttribute('data-instrumento-id');
+    const pontoId = btn.getAttribute('data-ponto-id');
+    if (!instrumentoId) return;
+    const meta = {
+        valorMin: btn.getAttribute('data-valor-min') || '',
+        valorMax: btn.getAttribute('data-valor-max') || '',
+        unidade: btn.getAttribute('data-unidade') || '',
+        toleranciaMais: btn.getAttribute('data-tolerancia-mais') || '',
+        toleranciaMenos: btn.getAttribute('data-tolerancia-menos') || '',
+    };
+    openAnalisarModalHome(pontoId, instrumentoId, meta);
+});
+</script>
+<!-- Modal Analisar Ponto (home) -->
+<div id="modalAnalisarPontoHome" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-lg bg-white">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold">Analisar Ponto de Calibração</h3>
+            <button onclick="closeAnalisarModalHome()" class="text-gray-400 hover:text-gray-600">✕</button>
+        </div>
+        <input type="hidden" id="analisarPontoIdHome">
+        <input type="hidden" id="analisarInstrumentoIdHome">
+        <div class="space-y-4">
+            <div class="grid grid-cols-1 gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700 md:grid-cols-3">
+                <div>
+                    <p class="text-xs font-semibold uppercase text-gray-500">Valor nominal</p>
+                    <p id="analisarValorNominalHome" class="font-medium text-gray-900">-</p>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold uppercase text-gray-500">Tolerância máxima (+)</p>
+                    <p id="analisarToleranciaMaisHome" class="font-medium text-gray-900">-</p>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold uppercase text-gray-500">Tolerância mínima (-)</p>
+                    <p id="analisarToleranciaMenosHome" class="font-medium text-gray-900">-</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-3 md:items-end">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Incerteza</label>
+                    <input id="analisarCertezaHome" type="number" step="0.0001" class="w-full max-w-[160px] px-2 py-1.5 border border-gray-300 rounded-lg" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Tendência</label>
+                    <input id="analisarTendenciaHome" type="number" step="0.0001" class="w-full max-w-[160px] px-2 py-1.5 border border-gray-300 rounded-lg" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Erro total</label>
+                    <input id="analisarErroTotalHome" type="text" readonly class="w-full max-w-[160px] px-2 py-1.5 border border-gray-200 bg-gray-100 text-gray-800 rounded-lg" />
+                    <p class="mt-1 text-xs text-gray-500">= |incerteza| + |tendência|</p>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Resultado</label>
+                <select id="analisarResultadoHome" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    <option value="">-- selecione --</option>
+                    <option value="aprovado">Aprovado</option>
+                    <option value="reprovado">Reprovado</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Observações (opcional)</label>
+                <textarea id="analisarObsHome" class="w-full px-3 py-2 border border-gray-300 rounded-lg" rows="3"></textarea>
+            </div>
+            <div class="flex justify-end space-x-3 pt-4 border-t">
+                <button onclick="closeAnalisarModalHome()" class="px-4 py-2 border border-gray-300 rounded-lg">Cancelar</button>
+                <button id="btnConfirmAnalisarHome" class="px-6 py-2 bg-indigo-600 text-white rounded-lg">Salvar Análise</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function openAnalisarModalHome(pontoId, instrumentoId, meta){
+    document.getElementById('analisarPontoIdHome').value = pontoId || '';
+    document.getElementById('analisarInstrumentoIdHome').value = instrumentoId || '';
+    document.getElementById('analisarCertezaHome').value = '';
+    document.getElementById('analisarTendenciaHome').value = '';
+    document.getElementById('analisarResultadoHome').value = '';
+    document.getElementById('analisarObsHome').value = '';
+    const nominalEl = document.getElementById('analisarValorNominalHome');
+    const tolMaisEl = document.getElementById('analisarToleranciaMaisHome');
+    const tolMenosEl = document.getElementById('analisarToleranciaMenosHome');
+    const safeMeta = meta || {};
+    const min = safeMeta.valorMin;
+    const max = safeMeta.valorMax;
+    const unidade = safeMeta.unidade;
+    const nominalText = (max || min)
+        ? `${min || '-'} ${unidade || ''}${max ? ' a ' + max : ''}`
+        : '-';
+    if (nominalEl) nominalEl.textContent = nominalText.trim();
+    if (tolMaisEl) {
+        tolMaisEl.textContent = safeMeta.toleranciaMais ? `${safeMeta.toleranciaMais} ${unidade || ''}`.trim() : '-';
+        tolMaisEl.dataset.value = safeMeta.toleranciaMais || '';
+    }
+    if (tolMenosEl) {
+        tolMenosEl.textContent = safeMeta.toleranciaMenos ? `${safeMeta.toleranciaMenos} ${unidade || ''}`.trim() : '-';
+        tolMenosEl.dataset.value = safeMeta.toleranciaMenos || '';
+    }
+    updateErroTotalHome();
+    document.getElementById('modalAnalisarPontoHome').classList.remove('hidden');
+}
+function closeAnalisarModalHome(){ document.getElementById('modalAnalisarPontoHome').classList.add('hidden'); }
+
+function updateErroTotalHome(){
+    const incEl = document.getElementById('analisarCertezaHome');
+    const tenEl = document.getElementById('analisarTendenciaHome');
+    const totalEl = document.getElementById('analisarErroTotalHome');
+    const tolEl = document.getElementById('analisarToleranciaMaisHome');
+    const resultadoEl = document.getElementById('analisarResultadoHome');
+    if (!incEl || !tenEl || !totalEl) return;
+
+    const parseNum = (val) => {
+        const n = parseFloat(val);
+        return Number.isFinite(n) ? n : null;
+    };
+
+    const inc = parseNum(incEl.value);
+    const ten = parseNum(tenEl.value);
+    if (inc === null || ten === null) {
+        totalEl.value = '';
+        return;
+    }
+
+    const total = Math.abs(inc) + Math.abs(ten);
+    totalEl.value = total.toFixed(4);
+
+    const tol = tolEl ? parseNum(tolEl.dataset.value) : null;
+    if (tol !== null && resultadoEl) {
+        resultadoEl.value = total <= tol ? 'aprovado' : 'reprovado';
+    }
+}
+
+['analisarCertezaHome', 'analisarTendenciaHome'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+        el.addEventListener('input', updateErroTotalHome);
+        el.addEventListener('change', updateErroTotalHome);
+    }
+});
+
+let isSubmittingAnalisarHome = false;
+
+function setAnalisarButtonLoading(state){
+    const btn = document.getElementById('btnConfirmAnalisarHome');
+    if (!btn) return;
+    if (state && !btn.dataset.originalText) {
+        btn.dataset.originalText = btn.textContent || '';
+    }
+    btn.disabled = state;
+    btn.classList.toggle('opacity-70', state);
+    btn.textContent = state ? 'Salvando...' : (btn.dataset.originalText || 'Salvar Análise');
+}
+
+document.getElementById('btnConfirmAnalisarHome').addEventListener('click', async ()=>{
+    if (isSubmittingAnalisarHome) return;
+    const ponto_id = document.getElementById('analisarPontoIdHome').value;
+    const instrumento_id = document.getElementById('analisarInstrumentoIdHome').value;
+    const incerteza = document.getElementById('analisarCertezaHome').value || null;
+    const tendencia = document.getElementById('analisarTendenciaHome').value || '';
+    const resultado = document.getElementById('analisarResultadoHome').value || '';
+    const observacoes = document.getElementById('analisarObsHome').value || '';
+
+    if (!ponto_id){ alert('Ponto inválido'); return; }
+    if (!resultado){ if(!confirm('Você tem certeza que deseja salvar sem selecionar um resultado?')) return; }
+
+    let payload = { ponto_id: ponto_id };
+    if (incerteza) payload.incerteza = incerteza;
+    if (tendencia) payload.tendencia = tendencia;
+    if (resultado) payload.resultado = resultado;
+    if (observacoes) payload.observacoes = observacoes;
+
+    isSubmittingAnalisarHome = true;
+    setAnalisarButtonLoading(true);
+    try {
+        const res = await fetch('/instrumentos/api/status-ponto/', {
+            method: 'POST', headers: {'Content-Type':'application/json','X-CSRFToken': getCSRF()}, body: JSON.stringify(payload)
+        });
+        const j = await res.json();
+        if (j.success){
+            alert(j.message || 'Análise salva');
+            closeAnalisarModalHome();
+            if (instrumento_id) {
+                await refreshHomeInstrument(instrumento_id);
+            }
+        } else {
+            alert(j.message || 'Erro ao salvar análise');
+        }
+    } catch (error) {
+        console.error('Erro ao salvar análise:', error);
+        alert('Erro ao salvar análise');
+    } finally {
+        isSubmittingAnalisarHome = false;
+        setAnalisarButtonLoading(false);
+    }
+});
+</script>
+<!-- Modal Enviar p/ Calibração (home) -->
+<div id="modalEnviarHome" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-lg bg-white">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold">Enviar para Calibração</h3>
+            <button onclick="closeEnviarModalHome()" class="text-gray-400 hover:text-gray-600">✕</button>
+        </div>
+        <input type="hidden" id="enviarInstrumentoIdHome">
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Laboratório</label>
+                <select id="enviarLabHome" class="w-full px-3 py-2 border border-gray-300 rounded-lg"></select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Data de Envio</label>
+                <input id="enviarDataHome" type="datetime-local" class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Observações (opcional)</label>
+                <textarea id="enviarObsHome" class="w-full px-3 py-2 border border-gray-300 rounded-lg" rows="3"></textarea>
+            </div>
+            <div class="flex justify-end space-x-3 pt-4 border-t">
+                <button onclick="closeEnviarModalHome()" class="px-4 py-2 border border-gray-300 rounded-lg">Cancelar</button>
+                <button id="btnConfirmEnviarHome" class="px-6 py-2 bg-green-600 text-white rounded-lg">Confirmar Envio</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function getCSRF() {
+    const name = 'csrftoken';
+    const cookies = document.cookie.split(';').map(c=>c.trim());
+    for (const c of cookies) {
+        if (c.startsWith(name + '=')) return decodeURIComponent(c.split('=')[1]);
+    }
+    return '';
+}
+
+function openEnviarModalHome(instrumentoId){
+    document.getElementById('enviarInstrumentoIdHome').value = instrumentoId;
+    document.getElementById('modalEnviarHome').classList.remove('hidden');
+    const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    document.getElementById('enviarDataHome').value = now.toISOString().slice(0,16);
+    loadLabsHome();
+}
+function closeEnviarModalHome(){ document.getElementById('modalEnviarHome').classList.add('hidden'); }
+
+function setEnviarButtonLoading(state){
+    const btn = document.getElementById('btnConfirmEnviarHome');
+    if (!btn) return;
+    if (state && !btn.dataset.originalText) {
+        btn.dataset.originalText = btn.textContent || '';
+    }
+    btn.disabled = state;
+    btn.classList.toggle('opacity-70', state);
+    btn.textContent = state ? 'Enviando...' : (btn.dataset.originalText || 'Confirmar Envio');
+}
+
+async function loadLabsHome(){
+    try{
+        const res = await fetch('/cadastro/api/laboratorios/');
+        const j = await res.json();
+        const sel = document.getElementById('enviarLabHome'); sel.innerHTML = '<option value="">-- Selecione --</option>';
+        (j.laboratorios||[]).forEach(l=>{ const o = document.createElement('option'); o.value=l.id; o.text=l.nome; sel.appendChild(o); });
+    }catch(e){ console.error(e); }
+}
+
+// open modal when a menu item 'Enviar' is clicked
+document.addEventListener('click', function(e){
+    const btn = e.target.closest('button[data-action="enviar"]');
+    if (!btn) return;
+    if (btn.disabled) return;
+    // find parent menu id like 'menu-<id>'
+    const menu = btn.closest('[id^="menu-"]');
+    if (!menu) return;
+    const parts = menu.id.split('-');
+    const instId = parts.length>1 ? parts[1] : null;
+    if (!instId) return;
+    openEnviarModalHome(instId);
+});
+
+let isSubmittingEnviarHome = false;
+
+document.getElementById('btnConfirmEnviarHome').addEventListener('click', async ()=>{
+    if (isSubmittingEnviarHome) return;
+    const instrumento_id = document.getElementById('enviarInstrumentoIdHome').value;
+    const labVal = document.getElementById('enviarLabHome').value;
+    const obs = document.getElementById('enviarObsHome').value || '';
+    const dataEnv = document.getElementById('enviarDataHome').value;
+    let payload = { instrumento_id: instrumento_id, observacoes: obs };
+    if (labVal && labVal !== '__outro__') payload.laboratorio_id = labVal;
+    else if (labVal === '__outro__') payload.laboratorio_nome = '';
+    if (dataEnv) payload.data_entrega = new Date(dataEnv).toISOString();
+
+    isSubmittingEnviarHome = true;
+    setEnviarButtonLoading(true);
+    try {
+        const res = await fetch('/instrumentos/api/enviar/', {
+            method: 'POST', headers: {'Content-Type':'application/json','X-CSRFToken': getCSRF()}, body: JSON.stringify(payload)
+        });
+        const j = await res.json();
+        if (j.success){
+            alert(j.message || 'Enviado');
+            closeEnviarModalHome();
+            loadHomeInstrumentos();
+        } else {
+            alert(j.message || 'Erro ao enviar');
+        }
+    } catch (error) {
+        console.error('Erro ao enviar instrumento:', error);
+        alert('Erro ao enviar instrumento.');
+    } finally {
+        setEnviarButtonLoading(false);
+        isSubmittingEnviarHome = false;
+    }
+});
+</script>
+<!-- Modal Designation (home) -->
+<div id="designationModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-3xl shadow-lg rounded-lg bg-white">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold">Entregar Instrumento para Funcionário</h3>
+            <button onclick="closeDesignationModal()" class="text-gray-400 hover:text-gray-600">✕</button>
+        </div>
+
+        <div class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Funcionário</label>
+                    <select id="design_funcionario" class="w-full px-3 py-2 border rounded"></select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Instrumento</label>
+                    <select id="design_instrumento" class="w-full px-3 py-2 border rounded"></select>
+                </div>
+            </div>
+
+            <div class="flex justify-end">
+                <button onclick="addDesignItem()" class="px-4 py-2 bg-indigo-600 text-white rounded">Adicionar</button>
+            </div>
+
+            <div class="bg-gray-50 border rounded">
+                <table class="min-w-full">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs">Funcionário</th>
+                            <th class="px-4 py-2 text-left text-xs">Instrumento</th>
+                            <th class="px-4 py-2 text-left text-xs">Observações</th>
+                            <th class="px-4 py-2 text-right text-xs">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="designTableBody">
+                        <tr><td colspan="4" class="px-4 py-3 text-center text-gray-500">Nenhum item adicionado.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-end space-x-3">
+                <button onclick="closeDesignationModal()" class="px-4 py-2 border rounded">Cancelar</button>
+                <button onclick="openSignatureModal()" class="px-6 py-2 bg-emerald-600 text-white rounded">Assinar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Assinatura (home) -->
+<div id="signatureModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-lg bg-white">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold">Assinar</h3>
+            <button onclick="closeSignatureModal()" class="text-gray-400 hover:text-gray-600">✕</button>
+        </div>
+
+        <div>
+            <div class="border rounded p-2">
+                <canvas id="signatureCanvas" class="w-full" style="height:200px;"></canvas>
+            </div>
+            <div class="mt-3 flex justify-between">
+                <button onclick="clearSignature()" class="px-4 py-2 border rounded">Limpar</button>
+                <div class="space-x-2">
+                    <button onclick="closeSignatureModal()" class="px-4 py-2 border rounded">Cancelar</button>
+                    <button onclick="submitDesignWithSignature()" class="px-6 py-2 bg-emerald-600 text-white rounded">Confirmar e Assinar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Historico (home) -->
+<div id="modalHistoricoHome" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-3xl shadow-lg rounded-lg bg-white">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold">Historico do Instrumento</h3>
+            <button onclick="closeHistoricoModalHome()" class="text-gray-400 hover:text-gray-600">✕</button>
+        </div>
+        <div class="bg-white border rounded-lg overflow-hidden">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data da Atualizacao</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descricao</th>
+                    </tr>
+                </thead>
+                <tbody id="historicoTableBodyHome" class="divide-y divide-gray-200"></tbody>
+            </table>
+        </div>
+        <div class="mt-4 flex justify-end">
+            <button onclick="closeHistoricoModalHome()" class="px-4 py-2 border border-gray-300 rounded-lg">Fechar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+function openHistoricoModalHome(instrumentoId){
+    const tbody = document.getElementById('historicoTableBodyHome');
+    tbody.innerHTML = '<tr><td colspan="2" class="px-4 py-3 text-center text-gray-500">Carregando...</td></tr>';
+    document.getElementById('modalHistoricoHome').classList.remove('hidden');
+
+    fetch(`/instrumentos/api/historico/${instrumentoId}/`)
+        .then(resp => resp.json())
+        .then(data => {
+            const itens = data.historico || [];
+            if (!itens.length){
+                tbody.innerHTML = '<tr><td colspan="2" class="px-4 py-3 text-center text-gray-500">Nenhum historico encontrado.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = itens.map(it => `
+                <tr>
+                    <td class="px-4 py-2 text-sm">${it.data ? new Date(it.data).toLocaleString() : '-'}</td>
+                    <td class="px-4 py-2 text-sm">${it.descricao || '-'}</td>
+                </tr>
+            `).join('');
+        })
+        .catch(() => {
+            tbody.innerHTML = '<tr><td colspan="2" class="px-4 py-3 text-center text-red-600">Erro ao carregar historico.</td></tr>';
+        });
+}
+
+function closeHistoricoModalHome(){
+    document.getElementById('modalHistoricoHome').classList.add('hidden');
+}
+
+// open historico modal when menu action 'historico' is clicked
+document.addEventListener('click', function(e){
+    const btn = e.target.closest('button[data-action="historico"]');
+    if (!btn) return;
+    const menu = btn.closest('[id^="menu-"]');
+    if (!menu) return;
+    const parts = menu.id.split('-');
+    const instId = parts.length>1 ? parts[1] : null;
+    if (!instId) return;
+    openHistoricoModalHome(instId);
+});
+</script>
+{% endblock %}

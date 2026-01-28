@@ -1,0 +1,41 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.env/
+.venv/
+env/
+
+# Environment/config files
+.env
+.env.*
+*.env
+
+# Django artifacts
+*.sqlite3
+static/
+staticfiles/
+media/
+
+# Packaging
+build/
+dist/
+.eggs/
+*.egg-info/
+
+# Logs and coverage
+*.log
+coverage.*
+htmlcov/
+.cache/
+.pytest_cache/
+.mypy_cache/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

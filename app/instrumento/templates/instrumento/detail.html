@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">Instrumento {{ instrumento.codigo }}</h1>
+<ul>
+  <li><strong>Descrição:</strong> {{ instrumento.descricao }}</li>
+  <li><strong>Tipo:</strong> {{ instrumento.tipo_instrumento.descricao if instrumento.tipo_instrumento }}</li>
+  <li><strong>Fabricante:</strong> {{ instrumento.fabricante }}</li>
+  <li><strong>Modelo:</strong> {{ instrumento.modelo }}</li>
+  <li><strong>Status:</strong> {{ instrumento.get_status_display }}</li>
+</ul>
+<a href="{% url 'instrumento:list' %}" class="mt-4 inline-block text-blue-600">Voltar</a>
+{% endblock %}
