@@ -20,8 +20,8 @@
                 </div>
             </article>
             <article class="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-slate-100 p-5 shadow-sm">
-                <h4 class="mt-2 text-lg font-semibold text-slate-900">Instrumentos em operação</h4>
-                <p class="text-sm text-slate-500">Instrumentos atualmente sob responsabilidade dos funcionários.</p>
+                <h4 class="mt-2 text-lg font-semibold text-slate-900">Em operação</h4>
+                <p class="text-sm text-slate-500">Instrumentos e máquinas atualmente sob responsabilidade dos funcionários.</p>
                 <div class="mt-6 flex items-center gap-3">
                     <div class="flex-1">
                         <p id="indicadorOperacao" class="text-3xl font-bold text-slate-900">--</p>
@@ -29,11 +29,20 @@
                 </div>
             </article>
             <article class="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-slate-100 p-5 shadow-sm">
-                <h4 class="mt-2 text-lg font-semibold text-slate-900">Instrumentos em calibração</h4>
-                <p class="text-sm text-slate-500">Instrumentos que estão em processo de calibração.</p>
+                <h4 class="mt-2 text-lg font-semibold text-slate-900">Em calibração</h4>
+                <p class="text-sm text-slate-500">Instrumentos e máquinas que estão em processo de calibração.</p>
                 <div class="mt-6 flex items-center gap-3">
                     <div class="flex-1">
                         <p id="indicadorCalibracao" class="text-3xl font-bold text-slate-900">--</p>
+                    </div>
+                </div>
+            </article>
+            <article class="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-slate-100 p-5 shadow-sm">
+                <h4 class="mt-2 text-lg font-semibold text-slate-900">Em atraso</h4>
+                <p class="text-sm text-slate-500">Instrumentos e máquinas com calibração vencida.</p>
+                <div class="mt-6 flex items-center gap-3">
+                    <div class="flex-1">
+                        <p id="indicadorAtraso" class="text-3xl font-bold text-slate-900">--</p>
                     </div>
                 </div>
             </article>
@@ -50,7 +59,7 @@
                     <div class="space-y-3">
                         <label class="block">
                             <span class="block text-xs text-gray-600 mb-1">Código ou descrição</span>
-                            <input id="filterSearch" type="text" class="w-full px-2 py-1.5 border border-gray-300 rounded-md" placeholder="Ex.: Micrômetro" />
+                            <input id="filterSearch" type="text" class="w-full px-2 py-1.5 border border-gray-300 rounded-md" placeholder="Ex.: DBT-CQ-001" />
                         </label>
                         <label class="block">
                             <span class="block text-xs text-gray-600 mb-1">Tipo de instrumento</span>
@@ -76,7 +85,7 @@
                     <header class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</header>
                     <div class="grid gap-3 sm:grid-cols-2">
                         <label class="block">
-                            <span class="block text-xs text-gray-600 mb-1">Tipo de atualização</span>
+                            <span class="block text-xs text-gray-600 mb-1">Buscar por última atualização</span>
                             <select id="filterSituacao" class="w-full px-2 py-1.5 border border-gray-300 rounded-md">
                                 <option value="">Todas</option>
                                 <option value="entregue">Entregue ao funcionário</option>
@@ -89,15 +98,12 @@
                             <select id="filterStatusCalibracao" class="w-full px-2 py-1.5 border border-gray-300 rounded-md">
                                 <option value="">Todos</option>
                                 <option value="em_dia">Em dia</option>
+                                <option value="a_calibrar">A calibrar</option>
                                 <option value="atrasado">Atrasado</option>
                                 <option value="sem_analise">Sem análise</option>
                             </select>
                         </label>
                     </div>
-                    <label class="mt-2 flex items-center gap-2 text-xs text-gray-600">
-                        <input id="filterPontosPendentes" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
-                        <span>Mostrar apenas instrumentos com pontos pendentes</span>
-                    </label>
                     <div class="mt-2">
                         <span class="block text-xs text-gray-600 mb-1">Validade</span>
                         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -111,6 +117,10 @@
                             </label>
                         </div>
                     </div>
+                    <label class="mt-2 flex items-center gap-2 text-xs text-gray-600">
+                        <input id="filterPontosPendentes" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                        <span>Instrumentos aguardando análise</span>
+                    </label>
                     <div class="flex flex-wrap justify-end gap-3 pt-2">
                         <!-- <button id="clearFiltersBtn" type="button" class="px-4 py-2 border border-gray-300 rounded-lg text-sm">Limpar filtros</button> -->
                         <button id="applyFiltersBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm">Aplicar filtros</button>
@@ -155,7 +165,8 @@ async function loadIndicadoresDashboard() {
     const pontosEl = document.getElementById('indicadorPontosPendentes');
     const operacaoEl = document.getElementById('indicadorOperacao');
     const calibracaoEl = document.getElementById('indicadorCalibracao');
-    if (!pontosEl || !operacaoEl || !calibracaoEl) return;
+    const atrasoEl = document.getElementById('indicadorAtraso');
+    if (!pontosEl || !operacaoEl || !calibracaoEl || !atrasoEl) return;
     try {
         const resp = await fetch('/instrumentos/api/indicadores/');
         const data = await resp.json();
@@ -166,11 +177,13 @@ async function loadIndicadoresDashboard() {
         pontosEl.textContent = formatNumber(data.pontos_pendentes);
         operacaoEl.textContent = formatNumber(data.instrumentos_operacao);
         calibracaoEl.textContent = formatNumber(data.instrumentos_calibracao);
+        atrasoEl.textContent = formatNumber(data.instrumentos_atraso);
     } catch (error) {
         console.error('Erro ao carregar indicadores:', error);
         pontosEl.textContent = '—';
         operacaoEl.textContent = '—';
         calibracaoEl.textContent = '—';
+        atrasoEl.textContent = '—';
     }
 }
 
@@ -218,6 +231,8 @@ function buildInstrumentRow(inst) {
     let statusBadge = { text: 'Sem análise', cls: 'bg-gray-100 text-gray-700' };
     if (statusKey === 'em_dia') {
         statusBadge = { text: 'Em dia', cls: 'bg-emerald-100 text-emerald-800' };
+    } else if (statusKey === 'a_calibrar') {
+        statusBadge = { text: 'A calibrar', cls: 'bg-amber-100 text-amber-800' };
     } else if (statusKey === 'atrasado') {
         statusBadge = { text: 'Atrasado', cls: 'bg-red-100 text-red-800' };
     } else if (statusKey === 'sem_analise') {
@@ -226,10 +241,14 @@ function buildInstrumentRow(inst) {
         const validDate = new Date(inst.valid_until);
         if (!Number.isNaN(validDate.getTime())) {
             const compareDate = new Date(validDate.getFullYear(), validDate.getMonth(), validDate.getDate());
-            const emDia = compareDate >= today;
-            statusBadge = emDia
-                ? { text: 'Em dia', cls: 'bg-emerald-100 text-emerald-800' }
-                : { text: 'Atrasado', cls: 'bg-red-100 text-red-800' };
+            const diffDays = Math.ceil((compareDate - today) / (1000 * 60 * 60 * 24));
+            if (diffDays >= 0 && diffDays <= 15) {
+                statusBadge = { text: 'A calibrar', cls: 'bg-amber-100 text-amber-800' };
+            } else if (diffDays > 15) {
+                statusBadge = { text: 'Em dia', cls: 'bg-emerald-100 text-emerald-800' };
+            } else {
+                statusBadge = { text: 'Atrasado', cls: 'bg-red-100 text-red-800' };
+            }
         }
     }
 

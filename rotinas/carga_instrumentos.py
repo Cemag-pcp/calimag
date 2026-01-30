@@ -82,6 +82,20 @@ def parse_date(value: str | None) -> date | None:
         return None
 
 
+def parse_int(value: str | None) -> int | None:
+    """Converte texto em inteiro, retornando None se inválido."""
+    if value is None:
+        return None
+    raw = str(value).strip()
+    if not raw:
+        return None
+    try:
+        return int(raw)
+    except ValueError:
+        print(f'Aviso: valor "{value}" ignorado (inteiro inválido).')
+        return None
+
+
 def clean_row(row: dict[str, str | None]) -> dict[str, str]:
     """Normaliza chaves para minusculas sem acento e remove espacos extras."""
     cleaned: dict[str, str] = {}
@@ -152,17 +166,21 @@ def process_csv(csv_path: Path) -> tuple[int, int, int, int]:
                     raw_data = normalized.get('data_aquisicao') if data_present else None
                     data_value = parse_date(raw_data) if raw_data else None
 
+                    periodicidade_present = ('periodicidade' in normalized) or ('periodicidade_calibracao' in normalized)
+                    raw_periodicidade = normalized.get('periodicidade')
+                    if raw_periodicidade is None:
+                        raw_periodicidade = normalized.get('periodicidade_calibracao')
+                    periodicidade_value = parse_int(raw_periodicidade) if periodicidade_present else None
+
+                    finalidade = 'finalidade' in normalized
+                    finalidade_value = normalized.get('finalidade') if finalidade else None
+
                     instrumento = Instrumento.objects.filter(codigo=codigo).select_related('tipo_instrumento').first()
 
                     if instrumento is None:
-                        if not descricao_raw:
-                            skipped += 1
-                            print(f'[linha {idx}] ignorada: novos instrumentos precisam da coluna "descricao" preenchida.')
-                            continue
-
                         Instrumento.objects.create(
                             codigo=codigo,
-                            descricao=descricao_raw,
+                            descricao=descricao_raw or '',
                             tipo_instrumento=tipo,
                             instrumento_controlado=controlado_value if controlado_value is not None else False,
                             fabricante=(fabricante_value or ''),
@@ -170,6 +188,8 @@ def process_csv(csv_path: Path) -> tuple[int, int, int, int]:
                             status=status_value or parse_status(None),
                             observacoes=(observacoes_value or ''),
                             data_aquisicao=data_value,
+                            finalidade=finalidade_value,
+                            periodicidade_calibracao=periodicidade_value if periodicidade_value is not None else Instrumento._meta.get_field('periodicidade_calibracao').default,
                         )
                         created += 1
                         continue
@@ -210,11 +230,16 @@ def process_csv(csv_path: Path) -> tuple[int, int, int, int]:
                         if instrumento.data_aquisicao != new_date:
                             update_data['data_aquisicao'] = new_date
 
+                    if periodicidade_present and periodicidade_value is not None:
+                        if instrumento.periodicidade_calibracao != periodicidade_value:
+                            update_data['periodicidade_calibracao'] = periodicidade_value
+
                     if update_data:
                         Instrumento.objects.filter(pk=instrumento.pk).update(**update_data)
                         updated += 1
                     else:
                         skipped += 1
+                        print(f'[linha {idx}] ignorada: nenhuma alteracao para o codigo "{codigo}".')
                 except Exception as exc:  # pylint: disable=broad-except
                     errors += 1
                     print(f'[linha {idx}] erro inesperado: {exc}')
@@ -226,9 +251,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description=(
             'Importa registros de Instrumento. '
-            'O CSV deve conter as colunas "codigo" e "descricao" obrigatoriamente, '
+            'O CSV deve conter a coluna "codigo" obrigatoriamente, '
             'e opcionalmente "tipo", "instrumento_controlado", "fabricante", '
-            '"modelo", "status", "observacoes" e "data_aquisicao".'
+            '"modelo", "status", "observacoes", "data_aquisicao" e "periodicidade".'
         )
     )
     parser.add_argument('csv_path', help='Caminho para o arquivo CSV a ser processado.')

@@ -39,6 +39,7 @@ def instrumentos_api(request):
     status = request.GET.get('status')
     tipo_id = request.GET.get('tipo_id')
     controlado = request.GET.get('controlado')
+    finalidade = request.GET.get('finalidade')
     try:
         page = int(request.GET.get('page', 1))
     except (TypeError, ValueError):
@@ -76,6 +77,11 @@ def instrumentos_api(request):
         elif normalized in {'0', 'false', 'f', 'nao', 'não'}:
             instrumentos = instrumentos.filter(instrumento_controlado=False)
 
+    if finalidade:
+        finalidade_keys = {choice[0] for choice in Instrumento.FINALIDADE_CHOICES}
+        if finalidade in finalidade_keys:
+            instrumentos = instrumentos.filter(finalidade=finalidade)
+
     instrumentos = instrumentos.order_by('-data_cadastro')
 
     paginator = Paginator(instrumentos, per_page)
@@ -98,6 +104,8 @@ def instrumentos_api(request):
             'total_pontos': getattr(i, 'total_pontos_calibracao', None),
             'data_aquisicao': i.data_aquisicao.strftime('%Y-%m-%d') if getattr(i, 'data_aquisicao', None) else '',
             'periodicidade': i.periodicidade_calibracao,
+            'finalidade': i.finalidade,
+            'finalidade_display': i.get_finalidade_display() if i.finalidade else '',
         })
 
     data = {

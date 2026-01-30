@@ -90,6 +90,12 @@ class Instrumento(models.Model):
         ('manutencao', 'Em Manutenção'),
         ('descartado', 'Descartado'),
     ]
+
+    FINALIDADE_CHOICES = [
+        ('maquina de solda', 'Máquina de Solda'),
+        ('gabarito', 'Gabarito'),
+        ('instrumento de medicao', 'Instrumento de Medição'),
+    ]
     
     codigo = models.CharField('Código', max_length=50, unique=True)
     descricao = models.CharField('Descrição', max_length=200, null=True, blank=True)
@@ -115,6 +121,7 @@ class Instrumento(models.Model):
         default=365,
         help_text='Intervalo em dias entre calibrações para este ponto'
     )
+    finalidade = models.CharField('Finalidade', max_length=100, blank=True, choices=FINALIDADE_CHOICES)  # coluna para tipo "maquina de solda", "gabarito", "instrumento de medicao"
 
     class Meta:
         verbose_name = 'Instrumento'

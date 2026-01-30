@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime, parse_date
 from django.core.paginator import Paginator
 from django.db.models import OuterRef, Subquery, Exists, Count, Q, ExpressionWrapper, F, DateTimeField, DurationField, Value
+from django.db.models.functions import Coalesce
 from django.views.decorators.http import require_GET
 from django.db import transaction
 from django.utils import timezone
@@ -162,6 +163,59 @@ def instrumentos_status_api(request):
 		),
 	)
 
+	fallback_date = timezone.make_aware(datetime.datetime(1900, 1, 1))
+	qs = qs.annotate(
+		pontos_analisados_count=Count(
+			'pontos_calibracao__status_pontos',
+			filter=Q(
+				pontos_calibracao__status_pontos__data_criacao__gte=Coalesce(
+					F('last_envio_data'),
+					Value(fallback_date)
+				)
+			),
+			distinct=True
+		)
+	)
+
+	situacao = (request.GET.get('situacao') or '').strip().lower()
+	if situacao:
+		if situacao in {'entregue', 'entregue_ao_funcionario', 'entregue_funcionario'}:
+			qs = qs.filter(
+				status_tipo__istartswith='Entregue ao funcion',
+				status_devolucao__isnull=True
+			)
+		elif situacao in {'enviado', 'enviado_laboratorio', 'enviado_ao_laboratorio'}:
+			qs = qs.filter(
+				status_tipo__istartswith='Enviado ao laborat',
+				status_recebimento__isnull=True
+			)
+		elif situacao in {'recebido', 'recebido_laboratorio', 'recebido_da_calibracao'}:
+			qs = qs.filter(
+				status_tipo__istartswith='Recebido do laborat'
+			)
+
+	status_calibracao = (request.GET.get('status_calibracao') or '').strip().lower()
+	if status_calibracao:
+		today = timezone.now().date()
+		if status_calibracao == 'em_dia':
+			qs = qs.filter(valid_until__date__gt=today + timedelta(days=15))
+		elif status_calibracao == 'a_calibrar':
+			qs = qs.filter(
+				valid_until__date__gte=today,
+				valid_until__date__lte=today + timedelta(days=15)
+			)
+		elif status_calibracao == 'atrasado':
+			qs = qs.filter(valid_until__date__lt=today)
+		elif status_calibracao == 'sem_analise':
+			qs = qs.filter(valid_until__isnull=True)
+
+	pendencias_pontos = (request.GET.get('pendencias_pontos') or '').strip().lower()
+	if pendencias_pontos in {'1', 'true', 'sim', 'yes'}:
+		qs = qs.filter(
+			total_pontos__gt=0,
+			pontos_analisados_count__lt=F('total_pontos')
+		)
+
 	validade_inicio = request.GET.get('validade_inicio')
 	validade_fim = request.GET.get('validade_fim')
 
@@ -181,7 +235,7 @@ def instrumentos_status_api(request):
 	page = int(request.GET.get('page', 1) or 1)
 	per_page = max(1, min(int(request.GET.get('per_page', 15) or 15), 200))
 
-	paginator = Paginator(qs.order_by('codigo'), per_page)
+	paginator = Paginator(qs.order_by(F('valid_until').asc(nulls_last=True), 'codigo'), per_page)
 	page_obj = paginator.get_page(page)
 
 	today = timezone.now().date()
@@ -197,22 +251,7 @@ def instrumentos_status_api(request):
 		if inst.total_pontos == 0:
 			pontos_ok = True
 		else:
-			pontos_qs = StatusPontoCalibracao.objects.filter(
-				ponto_calibracao__instrumento=inst
-			)
-
-			if inst.last_envio_data:
-				pontos_qs = pontos_qs.filter(
-					data_criacao__gte=inst.last_envio_data
-				)
-
-			pontos_ok = (
-				pontos_qs
-				.values('ponto_calibracao_id')
-				.distinct()
-				.count()
-				>= inst.total_pontos
-			)
+			pontos_ok = (inst.pontos_analisados_count or 0) >= inst.total_pontos
 
 		if not pontos_ok:
 			pending_analysis_count += 1
@@ -224,7 +263,11 @@ def instrumentos_status_api(request):
 		)
 
 		if valid_until and valid_until.date() >= today:
-			calibration_status = 'em_dia'
+			days_to_expire = (valid_until.date() - today).days
+			if days_to_expire <= 15:
+				calibration_status = 'a_calibrar'
+			else:
+				calibration_status = 'em_dia'
 		elif valid_until:
 			calibration_status = 'atrasado'
 		else:
@@ -295,25 +338,35 @@ def indicadores_dashboard(request):
 		tipo_status__istartswith='Enviado ao laboratório'
 	).order_by('-data_entrega')
 
+	last_recebimento_qs = StatusInstrumento.objects.filter(
+		instrumento=OuterRef('pk'),
+		tipo_status__istartswith='Recebido do laborat',
+		data_recebimento__isnull=False
+	).order_by('-data_recebimento')
+
+
 	instrumentos_data = list(
 		active_instrumentos.annotate(
 			ultimo_status_tipo=Subquery(latest_status_qs.values('tipo_status')[:1]),
 			ultimo_status_devolucao=Subquery(latest_status_qs.values('data_devolucao')[:1]),
-			ultimo_status_recebimento=Subquery(latest_status_qs.values('data_recebimento')[:1]),
+			ultimo_status_recebimento=Subquery(last_recebimento_qs.values('data_recebimento')[:1]),
 			ultimo_envio_data=Subquery(last_envio_qs.values('data_entrega')[:1]),
 		).values(
 			'id',
 			'ultimo_status_tipo',
 			'ultimo_status_devolucao',
 			'ultimo_status_recebimento',
-			'ultimo_envio_data'
+			'ultimo_envio_data',
+			'periodicidade_calibracao'
 		)
 	)
 
 	# ===== CONTADORES DE INSTRUMENTOS =====
 	instrumentos_operacao = 0
 	instrumentos_calibracao = 0
+	instrumentos_atraso = 0
 	instrumento_envio_map = {}
+	today = timezone.now().date()
 
 	for inst in instrumentos_data:
 		tipo_status = (inst.get('ultimo_status_tipo') or '').lower()
@@ -327,6 +380,11 @@ def indicadores_dashboard(request):
 			instrumentos_calibracao += 1
 
 		instrumento_envio_map[inst['id']] = inst.get('ultimo_envio_data')
+		if data_recebimento:
+			periodicidade = inst.get('periodicidade_calibracao') or 0
+			valid_until = (data_recebimento + timedelta(days=periodicidade)).date()
+			if valid_until < today:
+				instrumentos_atraso += 1
 
 	# ===== PONTOS DE CALIBRAÇÃO (APENAS DE INSTRUMENTOS CONTROLADOS) =====
 	ultima_analise_qs = StatusPontoCalibracao.objects.filter(
@@ -357,6 +415,7 @@ def indicadores_dashboard(request):
 		'pontos_pendentes': pendentes_pontos,
 		'instrumentos_operacao': instrumentos_operacao,
 		'instrumentos_calibracao': instrumentos_calibracao,
+		'instrumentos_atraso': instrumentos_atraso,
 	})
 
 

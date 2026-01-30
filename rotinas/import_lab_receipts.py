@@ -42,10 +42,10 @@ DATE_FORMATS = [
 MANDATORY_ALIASES = {
     "sequencia": {"sequencia", "seq", "linha"},
     "codigo": {"codigo", "instrumento", "cod", "instrument"},
-    "link": {"link", "linkcertificado", "certificado", "url"},
     "data_recebimento": {"datarecebimento", "data", "recebimento"},
 }
 OPTIONAL_ALIASES = {
+    "link": {"link", "linkcertificado", "certificado", "url"},
     "laboratorio": {"laboratorio", "lab", "laboratory"},
     "observacoes": {"observacoes", "obs", "comentario"},
 }
@@ -129,7 +129,7 @@ def parse_csv(path: Path, delimiter: Optional[str]) -> List[CsvRecord]:
     for line_number, row in iter_rows(reader):
         if indexes is None:
             indexes = resolve_indexes(row)
-            required = {"codigo", "link", "data_recebimento"}
+            required = {"codigo", "data_recebimento"}
             if required.issubset(indexes.keys()):
                 # header row, skip
                 continue
@@ -140,7 +140,10 @@ def parse_csv(path: Path, delimiter: Optional[str]) -> List[CsvRecord]:
                 "data_recebimento": 3 if len(row) > 3 else 2,
             }
         codigo = row[indexes["codigo"]] if len(row) > indexes["codigo"] else ""
-        link = row[indexes["link"]] if len(row) > indexes["link"] else ""
+        link = ""
+        link_idx = indexes.get("link")
+        if link_idx is not None and len(row) > link_idx:
+            link = row[link_idx]
         raw_date = row[indexes["data_recebimento"]] if len(row) > indexes["data_recebimento"] else ""
         recebimento = parse_date(raw_date) or timezone.now()
         laboratorio = ""
@@ -151,8 +154,8 @@ def parse_csv(path: Path, delimiter: Optional[str]) -> List[CsvRecord]:
             laboratorio = row[lab_idx]
         if obs_idx is not None and len(row) > obs_idx:
             obs = row[obs_idx]
-        if not codigo or not link:
-            raise ValueError(f"Linha {line_number}: codigo e link sao obrigatorios")
+        if not codigo:
+            raise ValueError(f"Linha {line_number}: codigo e obrigatorio")
         records.append(CsvRecord(line=line_number, codigo=codigo, link=link, recebimento=recebimento, laboratorio=laboratorio, observacoes=obs))
     return records
 
@@ -188,13 +191,14 @@ def register_receipt(record: CsvRecord, dry_run: bool) -> None:
             observacoes=(record.observacoes or f'Importacao CSV - Recebido do lab {lab_name}'),
             tipo_status=f'Recebido do laboratorio {lab_name}',
         )
-        CertificadoCalibracao.objects.create(status=status, link=record.link.strip())
+        if record.link.strip():
+            CertificadoCalibracao.objects.create(status=status, link=record.link.strip())
     print(f"OK linha {record.line}: {instrumento.codigo} recebido ({lab_name})")
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Importa recebimentos de laboratório a partir de um CSV.")
-    parser.add_argument("csv_path", type=Path, help="Arquivo CSV com colunas codigo, link_certificado, data_recebimento")
+    parser.add_argument("csv_path", type=Path, help="Arquivo CSV com colunas codigo, data_recebimento e link_certificado opcional")
     parser.add_argument("--delimiter", dest="delimiter", help="Delimitador (auto detect quando omitido)")
     parser.add_argument("--dry-run", action="store_true", help="Valida sem gravar no banco")
     return parser

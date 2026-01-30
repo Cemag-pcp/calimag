@@ -152,7 +152,6 @@ def process_csv(csv_path: Path) -> tuple[int, int, int, int]:
                     valor_min = parse_decimal(normalized.get('nominal_min'))
                     valor_max = parse_decimal(normalized.get('nominal_max'))
                     unidade = normalized.get('unidade') or 'outro'
-                    periodicidade = parse_int(normalized.get('periodicidade'), default=365) or 365
                     tolerancia_menos = parse_decimal(normalized.get('tolerancia_min'))
                     tolerancia_mais = parse_decimal(normalized.get('tolerancia_max'))
 
@@ -164,7 +163,6 @@ def process_csv(csv_path: Path) -> tuple[int, int, int, int]:
                         'valor_maximo': valor_max,
                         'valor_nominal': valor_nominal,
                         'unidade': unidade,
-                        'periodicidade_calibracao': periodicidade,
                         'tolerancia_menos': tolerancia_menos,
                         'tolerancia_mais': tolerancia_mais,
                         'ativo': True,
