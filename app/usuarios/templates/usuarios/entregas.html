@@ -247,12 +247,21 @@ async function loadDesignFuncionarios() {
 
 async function loadDesignInstrumentos() {
     try {
-        const resp = await fetch('/instrumentos/api/disponiveis/');
-        const data = await resp.json();
+        const allItems = [];
+        let page = 1;
+        let pages = 1;
+        const perPage = 200;
+        while (page <= pages) {
+            const resp = await fetch(`/instrumentos/api/disponiveis/?page=${page}&per_page=${perPage}`);
+            const data = await resp.json();
+            const itens = data.instrumentos || [];
+            allItems.push(...itens);
+            pages = (data.pagination && data.pagination.pages) ? data.pagination.pages : 1;
+            page += 1;
+        }
         const sel = document.getElementById('design_instrumento');
         sel.innerHTML = '<option value="">Selecione instrumento...</option>';
-        const itens = data.instrumentos || [];
-        itens.forEach(i => {
+        allItems.forEach(i => {
             const opt = document.createElement('option');
             opt.value = i.id;
             opt.textContent = `${i.codigo} - ${i.descricao} - ${i.tipo}`;
