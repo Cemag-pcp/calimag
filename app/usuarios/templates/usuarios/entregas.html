@@ -1,4 +1,4 @@
-{% extends 'usuarios/base.html' %}
+﻿{% extends 'usuarios/base.html' %}
 
 {% block content %}
 
@@ -14,11 +14,11 @@
                 </svg>
                 <span>Entregar</span>
             </button>
-            <button onclick="openDevolucaoModal()" class="bg-amber-500 text-white px-6 py-3 rounded-lg hover:bg-amber-600 transition flex items-center space-x-2">
+            <button id="btnOpenDevolucao" onclick="openDevolucaoModal()" class="bg-amber-500 text-white px-6 py-3 rounded-lg hover:bg-amber-600 transition flex items-center space-x-2 disabled:opacity-70 disabled:cursor-not-allowed">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-8 10-5-5"/>
                 </svg>
-                <span>Devolução</span>
+                <span id="btnOpenDevolucaoLabel">Devolução</span>
             </button>
         </div>
     </div>
@@ -75,8 +75,8 @@
 <div id="designationModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
     <div class="relative top-20 mx-auto p-5 border w-full max-w-3xl shadow-lg rounded-lg bg-white">
         <div class="flex justify-between items-center mb-4">
-            <h3 class="text-xl font-bold">Enrtegar Instrumento para Funcionário</h3>
-            <button onclick="closeDesignationModal()" class="text-gray-400 hover:text-gray-600">✕</button>
+            <h3 class="text-xl font-bold">Entregar Instrumento para Funcionário</h3>
+            <button onclick="closeDesignationModal()" class="text-gray-400 hover:text-gray-600">×</button>
         </div>
 
         <div class="space-y-4">
@@ -124,7 +124,7 @@
     <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-lg bg-white">
         <div class="flex justify-between items-center mb-4">
             <h3 class="text-xl font-bold">Assinar</h3>
-            <button onclick="closeSignatureModal()" class="text-gray-400 hover:text-gray-600">✕</button>
+            <button onclick="closeSignatureModal()" class="text-gray-400 hover:text-gray-600">×</button>
         </div>
 
         <div>
@@ -147,7 +147,7 @@
     <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-lg bg-white">
         <div class="flex justify-between items-center mb-4">
             <h3 class="text-xl font-bold">Registrar Devolução</h3>
-            <button onclick="closeDevolucaoModal()" class="text-gray-400 hover:text-gray-600">✕</button>
+            <button onclick="closeDevolucaoModal()" class="text-gray-400 hover:text-gray-600">×</button>
         </div>
         <div class="space-y-4">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -225,7 +225,7 @@ async function loadDesignFuncionarios() {
         const resp = await fetch('/cadastro/api/funcionarios/');
         const data = await resp.json();
         const sel = document.getElementById('design_funcionario');
-        sel.innerHTML = '<option value="">Selecione funcionário...</option>';
+        sel.innerHTML = '<option value="">Selecione funcionÃ¡rio...</option>';
         (data.funcionarios || []).forEach(f => {
             sel.innerHTML += `<option value="${f.id}">${f.matricula} - ${f.nome}</option>`;
         });
@@ -239,7 +239,7 @@ async function loadDesignFuncionarios() {
                 shouldSort: false,
                 itemSelectText: '',
                 placeholder: true,
-                placeholderValue: 'Selecione funcionário...'
+                placeholderValue: 'Selecione funcionÃ¡rio...'
             });
         }
     } catch (e) { console.error(e); }
@@ -327,8 +327,8 @@ function applyDesignationPrefill(prefill) {
 function addDesignItem() {
     const funcId = document.getElementById('design_funcionario').value;
     const instId = document.getElementById('design_instrumento').value;
-    if (!funcId || !instId) { alert('Selecione funcionário e instrumento'); return; }
-    if (designItems.find(it => it.instrumento_id == instId)) { alert('Instrumento já adicionado'); return; }
+    if (!funcId || !instId) { alert('Selecione funcionÃ¡rio e instrumento'); return; }
+    if (designItems.find(it => it.instrumento_id == instId)) { alert('Instrumento jÃ¡ adicionado'); return; }
     const funcText = document.getElementById('design_funcionario').selectedOptions[0].text;
     const instText = document.getElementById('design_instrumento').selectedOptions[0].text;
     designItems.push({ funcionario_id: funcId, instrumento_id: instId, funcionario_label: funcText, instrumento_label: instText });
@@ -419,16 +419,16 @@ async function submitDesignWithSignature() {
         const results = await Promise.all(promises);
         const errors = results.filter(r => !r.success);
         if (errors.length) {
-            alert('Algumas designações falharam');
+            alert('Algumas designaÃ§Ãµes falharam');
         } else {
-            alert('Designações realizadas com sucesso');
+            alert('DesignaÃ§Ãµes realizadas com sucesso');
             designItems = [];
             renderDesignTable();
             closeSignatureModal();
             closeDesignationModal();
         }
     } catch (e) {
-        alert('Erro ao enviar designações');
+        alert('Erro ao enviar designaÃ§Ãµes');
     } finally {
         if (submitBtn) {
             submitBtn.disabled = false;
@@ -443,6 +443,34 @@ let entregasCache = [];
 const devolucaoFuncionarioSelect = document.getElementById('devolucao_funcionario');
 const devolucaoInstrumentoSelect = document.getElementById('devolucao_instrumento');
 const devolucaoModalEl = document.getElementById('devolucaoModal');
+const devolucaoOpenBtn = document.getElementById('btnOpenDevolucao');
+const devolucaoOpenBtnLabel = document.getElementById('btnOpenDevolucaoLabel');
+let devolucaoFuncionarioChoices = null;
+
+function setDevolucaoOpenButtonLoading(isLoading) {
+    if (!devolucaoOpenBtn) return;
+    devolucaoOpenBtn.disabled = isLoading;
+    if (devolucaoOpenBtnLabel) {
+        devolucaoOpenBtnLabel.textContent = isLoading ? 'Carregando...' : 'Devolução';
+    }
+}
+
+function rebuildDevolucaoFuncionarioChoices() {
+    if (!devolucaoFuncionarioSelect) return;
+    if (devolucaoFuncionarioChoices) {
+        devolucaoFuncionarioChoices.destroy();
+        devolucaoFuncionarioChoices = null;
+    }
+    if (window.Choices) {
+        devolucaoFuncionarioChoices = new Choices('#devolucao_funcionario', {
+            searchEnabled: true,
+            shouldSort: false,
+            itemSelectText: '',
+            placeholder: true,
+            placeholderValue: 'Selecione funcionário...'
+        });
+    }
+}
 
 function getEntregaFiltersFromForm() {
     const searchInput = document.getElementById('entregasSearch');
@@ -496,7 +524,7 @@ function renderEntregasPagination() {
         const page = entregasPagination?.page || 1;
         const pages = entregasPagination?.pages || 1;
         const total = entregasPagination?.total || 0;
-        info.textContent = total ? `Página ${page} de ${pages} — ${total} entrega(s)` : 'Nenhuma entrega encontrada';
+        info.textContent = total ? `PÃ¡gina ${page} de ${pages} â€” ${total} entrega(s)` : 'Nenhuma entrega encontrada';
     }
     const prevBtn = document.getElementById('entregasPrevPage');
     if (prevBtn) {
@@ -549,7 +577,7 @@ async function refreshDevolucaoCache(force = false) {
 
         entregasCache = allItems;
     } catch (error) {
-        console.error('Erro ao carregar entregas ativas para devolução:', error);
+        console.error('Erro ao carregar entregas ativas para devoluÃ§Ã£o:', error);
         entregasCache = [];
     }
 }
@@ -561,15 +589,20 @@ async function ensureDevolucaoCache() {
 }
 
 async function openDevolucaoModal() {
-    await ensureDevolucaoCache();
-    populateDevolucaoFuncionarios();
-    populateDevolucaoInstrumentos();
-    const obsField = document.getElementById('devolucao_observacoes');
-    const dateField = document.getElementById('devolucao_data');
-    if (obsField) obsField.value = '';
-    if (dateField) dateField.value = '';
-    if (devolucaoModalEl) {
-        devolucaoModalEl.classList.remove('hidden');
+    setDevolucaoOpenButtonLoading(true);
+    try {
+        await ensureDevolucaoCache();
+        populateDevolucaoFuncionarios();
+        populateDevolucaoInstrumentos();
+        const obsField = document.getElementById('devolucao_observacoes');
+        const dateField = document.getElementById('devolucao_data');
+        if (obsField) obsField.value = '';
+        if (dateField) dateField.value = '';
+        if (devolucaoModalEl) {
+            devolucaoModalEl.classList.remove('hidden');
+        }
+    } finally {
+        setDevolucaoOpenButtonLoading(false);
     }
 }
 
@@ -594,12 +627,22 @@ function populateDevolucaoFuncionarios() {
             });
         }
     });
-    devolucaoFuncionarioSelect.innerHTML = '<option value="">Selecione funcionário...</option>';
+    devolucaoFuncionarioSelect.innerHTML = '<option value="">Selecione funcionrio...</option>';
     unique.forEach(func => {
-        const labelMat = func.matricula ? func.matricula : 'Sem matrícula';
+        const labelMat = func.matricula ? func.matricula : 'Sem matrÃ­cula';
         devolucaoFuncionarioSelect.innerHTML += `<option value="${func.id}">${labelMat} - ${func.nome}</option>`;
     });
+
+    rebuildDevolucaoFuncionarioChoices();
     devolucaoFuncionarioSelect.disabled = !unique.length;
+    if (devolucaoFuncionarioChoices) {
+        if (devolucaoFuncionarioSelect.disabled) {
+            devolucaoFuncionarioChoices.disable();
+        } else {
+            devolucaoFuncionarioChoices.enable();
+        }
+    }
+
     if (!unique.length) {
         if (devolucaoInstrumentoSelect) {
             devolucaoInstrumentoSelect.innerHTML = '<option value="">Nenhum instrumento ativo</option>';
@@ -634,8 +677,8 @@ async function submitDevolucao() {
     const originalText = submitBtn ? submitBtn.textContent : '';
     const funcId = devolucaoFuncionarioSelect ? devolucaoFuncionarioSelect.value : '';
     const instId = devolucaoInstrumentoSelect ? devolucaoInstrumentoSelect.value : '';
-    if (!funcId) { alert('Selecione o funcionário responsável pela devolução.'); return; }
-    if (!instId) { alert('Selecione o instrumento que será devolvido.'); return; }
+    if (!funcId) { alert('Selecione o funcionÃ¡rio responsÃ¡vel pela devoluÃ§Ã£o.'); return; }
+    if (!instId) { alert('Selecione o instrumento que serÃ¡ devolvido.'); return; }
     const dateField = document.getElementById('devolucao_data');
     const obsField = document.getElementById('devolucao_observacoes');
     const payload = {
@@ -667,20 +710,20 @@ async function submitDevolucao() {
         });
         const result = await resp.json();
         if (!resp.ok || !result.success) {
-            throw new Error(result.message || 'Falha ao registrar devolução');
+            throw new Error(result.message || 'Falha ao registrar devoluÃ§Ã£o');
         }
-        alert('Devolução registrada com sucesso');
+        alert('DevoluÃ§Ã£o registrada com sucesso');
         closeDevolucaoModal();
         await refreshDevolucaoCache(true);
         await loadEntregas({ pageOverride: entregasPagination.page });
     } catch (error) {
         console.error(error);
-        alert(error.message || 'Erro ao registrar devolução');
+        alert(error.message || 'Erro ao registrar devoluÃ§Ã£o');
     } finally {
         if (submitBtn) {
             submitBtn.disabled = false;
             submitBtn.classList.remove('opacity-70');
-            submitBtn.textContent = originalText || 'Confirmar devolução';
+            submitBtn.textContent = originalText || 'Confirmar devoluÃ§Ã£o';
         }
     }
 }
@@ -723,20 +766,20 @@ async function handlePendingDesignationPrefill() {
     try {
         stored = sessionStorage.getItem(ENTREGA_PREFILL_STORAGE_KEY);
     } catch (error) {
-        console.warn('Não foi possível ler dados de re-entrega:', error);
+        console.warn('NÃ£o foi possÃ­vel ler dados de re-entrega:', error);
         return;
     }
     if (!stored) return;
     try {
         sessionStorage.removeItem(ENTREGA_PREFILL_STORAGE_KEY);
     } catch (error) {
-        console.warn('Não foi possível limpar dados de re-entrega:', error);
+        console.warn('NÃ£o foi possÃ­vel limpar dados de re-entrega:', error);
     }
     let data = null;
     try {
         data = JSON.parse(stored);
     } catch (error) {
-        console.warn('Dados de re-entrega inválidos:', error);
+        console.warn('Dados de re-entrega invÃ¡lidos:', error);
         return;
     }
     await openDesignationModal(data);
@@ -762,11 +805,11 @@ async function uploadEntregasCsv() {
         if (!resp.ok || !result.success) {
             throw new Error(result.message || 'Erro ao importar entregas.');
         }
-        alert(result.message || 'Importação concluída.');
+        alert(result.message || 'ImportaÃ§Ã£o concluÃ­da.');
         await loadEntregas({ pageOverride: 1, updateFilters: true });
         await refreshDevolucaoCache(true);
     } catch (error) {
-        alert(error.message || 'Falha inesperada durante a importação.');
+        alert(error.message || 'Falha inesperada durante a importaÃ§Ã£o.');
     } finally {
         input.value = '';
     }
@@ -812,3 +855,4 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 {% endblock %}
+
