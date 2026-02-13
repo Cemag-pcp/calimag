@@ -89,6 +89,7 @@ class Instrumento(models.Model):
         ('inativo', 'Inativo'),
         ('manutencao', 'Em Manutenção'),
         ('descartado', 'Descartado'),
+        ('perdido', 'Perdido'),
     ]
 
     FINALIDADE_CHOICES = [

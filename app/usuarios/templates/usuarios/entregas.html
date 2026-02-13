@@ -530,13 +530,24 @@ function setupEntregasPaginationControls() {
 async function refreshDevolucaoCache(force = false) {
     if (!force && entregasCache.length) return;
     try {
-        const params = new URLSearchParams();
-        params.append('status', 'ativo');
-        params.append('page', 1);
-        params.append('per_page', 200);
-        const res = await fetch(`/instrumentos/api/entregas/?${params.toString()}`);
-        const data = await res.json();
-        entregasCache = data.entregas || [];
+        const allItems = [];
+        let page = 1;
+        let pages = 1;
+        const perPage = 200;
+
+        while (page <= pages) {
+            const params = new URLSearchParams();
+            params.append('status', 'ativo');
+            params.append('page', page);
+            params.append('per_page', perPage);
+            const res = await fetch(`/instrumentos/api/entregas/?${params.toString()}`);
+            const data = await res.json();
+            allItems.push(...(data.entregas || []));
+            pages = data.pagination?.pages || 1;
+            page += 1;
+        }
+
+        entregasCache = allItems;
     } catch (error) {
         console.error('Erro ao carregar entregas ativas para devolução:', error);
         entregasCache = [];
