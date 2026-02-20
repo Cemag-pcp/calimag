@@ -188,17 +188,18 @@ function getCSRF() {
     return '';
 }
 
-const ENTREGA_PREFILL_STORAGE_KEY = 'calibracao_entrega_prefill';
-const ENTREGAS_PAGE_SIZE = 15;
+var ENTREGA_PREFILL_STORAGE_KEY = window.ENTREGA_PREFILL_STORAGE_KEY || 'calibracao_entrega_prefill';
+window.ENTREGA_PREFILL_STORAGE_KEY = ENTREGA_PREFILL_STORAGE_KEY;
+var ENTREGAS_PAGE_SIZE = 15;
 
-let entregasFilters = { search: '', status: 'all' };
-let entregasPagination = { page: 1, pages: 1, total: 0 };
-let entregasTableData = [];
-let entregasSearchTimeout = null;
+var entregasFilters = { search: '', status: 'all' };
+var entregasPagination = { page: 1, pages: 1, total: 0 };
+var entregasTableData = [];
+var entregasSearchTimeout = null;
 
-let designItems = [];
-let designInstrumentoChoices = null;
-let designFuncionarioChoices = null;
+var designItems = [];
+var designInstrumentoChoices = null;
+var designFuncionarioChoices = null;
 
 async function openDesignationModal(prefillOptions) {
     renderDesignTable();
@@ -366,27 +367,30 @@ function closeSignatureModal() {
     document.getElementById('signatureModal').classList.add('hidden');
 }
 
-let sigCanvas, sigCtx, drawing = false;
-function setupSignatureCanvas() {
-    sigCanvas = document.getElementById('signatureCanvas');
-    sigCtx = sigCanvas.getContext('2d');
-    sigCanvas.width = sigCanvas.clientWidth;
-    sigCanvas.height = 200;
-    sigCtx.fillStyle = '#fff';
-    sigCtx.fillRect(0,0,sigCanvas.width,sigCanvas.height);
-    sigCtx.strokeStyle = '#000';
-    sigCtx.lineWidth = 2;
+window.sigCanvas = window.sigCanvas || null;
+window.sigCtx = window.sigCtx || null;
+window.sigDrawing = window.sigDrawing || false;
 
-    sigCanvas.onpointerdown = (e) => { drawing = true; sigCtx.beginPath(); sigCtx.moveTo(e.offsetX, e.offsetY); };
-    sigCanvas.onpointermove = (e) => { if (!drawing) return; sigCtx.lineTo(e.offsetX, e.offsetY); sigCtx.stroke(); };
-    sigCanvas.onpointerup = () => { drawing = false; };
+function setupSignatureCanvas() {
+    window.sigCanvas = document.getElementById('signatureCanvas');
+    window.sigCtx = window.sigCanvas.getContext('2d');
+    window.sigCanvas.width = window.sigCanvas.clientWidth;
+    window.sigCanvas.height = 200;
+    window.sigCtx.fillStyle = '#fff';
+    window.sigCtx.fillRect(0,0,window.sigCanvas.width,window.sigCanvas.height);
+    window.sigCtx.strokeStyle = '#000';
+    window.sigCtx.lineWidth = 2;
+
+    window.sigCanvas.onpointerdown = (e) => { window.sigDrawing = true; window.sigCtx.beginPath(); window.sigCtx.moveTo(e.offsetX, e.offsetY); };
+    window.sigCanvas.onpointermove = (e) => { if (!window.sigDrawing) return; window.sigCtx.lineTo(e.offsetX, e.offsetY); window.sigCtx.stroke(); };
+    window.sigCanvas.onpointerup = () => { window.sigDrawing = false; };
 }
 
 function clearSignature() {
-    if (sigCtx) {
-        sigCtx.clearRect(0,0,sigCanvas.width,sigCanvas.height);
-        sigCtx.fillStyle = '#fff';
-        sigCtx.fillRect(0,0,sigCanvas.width,sigCanvas.height);
+    if (window.sigCtx) {
+        window.sigCtx.clearRect(0,0,window.sigCanvas.width,window.sigCanvas.height);
+        window.sigCtx.fillStyle = '#fff';
+        window.sigCtx.fillRect(0,0,window.sigCanvas.width,window.sigCanvas.height);
     }
 }
 
@@ -398,7 +402,7 @@ async function submitDesignWithSignature() {
         submitBtn.classList.add('opacity-70');
         submitBtn.textContent = 'Enviando...';
     }
-    const dataUrl = sigCanvas.toDataURL('image/png');
+    const dataUrl = window.sigCanvas.toDataURL('image/png');
     const promises = designItems.map(item => {
         return fetch('/instrumentos/api/designar/', {
             method: 'POST',
@@ -481,7 +485,7 @@ function getEntregaFiltersFromForm() {
     };
 }
 
-async function loadEntregas(options = {}) {
+window.loadEntregas = async function(options = {}) {
     const { pageOverride = null, updateFilters = false } = options;
     if (updateFilters) {
         entregasFilters = getEntregaFiltersFromForm();
@@ -536,7 +540,7 @@ function renderEntregasPagination() {
     }
 }
 
-function setupEntregasPaginationControls() {
+window.setupEntregasPaginationControls = function() {
     const prevBtn = document.getElementById('entregasPrevPage');
     if (prevBtn) {
         prevBtn.addEventListener('click', () => {
@@ -555,7 +559,7 @@ function setupEntregasPaginationControls() {
     }
 }
 
-async function refreshDevolucaoCache(force = false) {
+window.refreshDevolucaoCache = async function(force = false) {
     if (!force && entregasCache.length) return;
     try {
         const allItems = [];
@@ -761,7 +765,7 @@ function renderEntregasCsvErrors(errors = []) {
     box.classList.remove('hidden');
 }
 
-async function handlePendingDesignationPrefill() {
+window.handlePendingDesignationPrefill = async function() {
     let stored = null;
     try {
         stored = sessionStorage.getItem(ENTREGA_PREFILL_STORAGE_KEY);
@@ -848,10 +852,10 @@ if (devolucaoInstrumentoSelect) {
     devolucaoInstrumentoSelect.disabled = true;
 }
 window.addEventListener('DOMContentLoaded', () => {
-    setupEntregasPaginationControls();
-    loadEntregas({ pageOverride: 1, updateFilters: true });
-    refreshDevolucaoCache(true);
-    handlePendingDesignationPrefill();
+    if (typeof window.setupEntregasPaginationControls === 'function') window.setupEntregasPaginationControls();
+    if (typeof window.loadEntregas === 'function') window.loadEntregas({ pageOverride: 1, updateFilters: true });
+    if (typeof window.refreshDevolucaoCache === 'function') window.refreshDevolucaoCache(true);
+    if (typeof window.handlePendingDesignationPrefill === 'function') window.handlePendingDesignationPrefill();
 });
 </script>
 {% endblock %}

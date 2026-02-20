@@ -93,9 +93,9 @@ function getCSRF() {
   return '';
 }
 
-let setoresCache = [];
+var setoresCache = [];
 
-async function loadSetores(){
+window.loadSetores = async function(){
   const res = await fetch('/cadastro/api/setores/');
   const data = await res.json();
   setoresCache = data.setores || [];
@@ -191,7 +191,7 @@ function showToast(msg){
   setTimeout(()=>{ t.classList.add('hidden'); t.classList.remove('block'); }, 3000);
 }
 
-window.addEventListener('DOMContentLoaded', ()=>{ loadSetores(); });
+window.addEventListener('DOMContentLoaded', ()=>{ window.loadSetores(); });
 </script>
 
 {% endblock %}

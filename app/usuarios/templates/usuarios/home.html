@@ -3,8 +3,8 @@
 {% block content %}
     <div class="text-sm space-y-8">
         <div class="mb-8">
-        <h2 class="text-3xl font-bold text-gray-900 mb-2">Plano mestre de calibração</h2>
-        <p class="text-gray-600"></p>
+        <h2 class="text-3xl font-bold text-gray-900 mb-2">{{ pmc_title|default:"Plano mestre de calibração" }}</h2>
+        <p class="text-gray-600">{{ pmc_subtitle|default:"" }}</p>
     </div>
 
     <!-- Placeholder Cards para Indicadores -->
@@ -159,8 +159,10 @@
     </div>
 
 <script>
-const HOME_PAGE_SIZE = 15;
-const ENTREGA_PREFILL_STORAGE_KEY = 'calibracao_entrega_prefill';
+var HOME_PAGE_SIZE = 15;
+var ENTREGA_PREFILL_STORAGE_KEY = window.ENTREGA_PREFILL_STORAGE_KEY || 'calibracao_entrega_prefill';
+var HOME_PMC_SCOPE = '{{ pmc_scope|default:"instrumentos" }}';
+window.ENTREGA_PREFILL_STORAGE_KEY = ENTREGA_PREFILL_STORAGE_KEY;
 async function loadIndicadoresDashboard() {
     const pontosEl = document.getElementById('indicadorPontosPendentes');
     const operacaoEl = document.getElementById('indicadorOperacao');
@@ -168,7 +170,9 @@ async function loadIndicadoresDashboard() {
     const atrasoEl = document.getElementById('indicadorAtraso');
     if (!pontosEl || !operacaoEl || !calibracaoEl || !atrasoEl) return;
     try {
-        const resp = await fetch('/instrumentos/api/indicadores/');
+        const params = new URLSearchParams();
+        if (HOME_PMC_SCOPE) params.append('pmc_categoria', HOME_PMC_SCOPE);
+        const resp = await fetch(`/instrumentos/api/indicadores/?${params.toString()}`);
         const data = await resp.json();
         const formatNumber = (value) => {
             if (typeof value !== 'number') return '--';
@@ -187,10 +191,10 @@ async function loadIndicadoresDashboard() {
     }
 }
 
-const isSentToLaboratorio = (status) => status && (status.startsWith('Enviado ao laboratório') || status.startsWith('Enviado ao laboratório'));
-let currentFilters = {};
-let homeCurrentPage = 1;
-let homePagination = { page: 1, pages: 1, total: 0 };
+var isSentToLaboratorio = (status) => status && (status.startsWith('Enviado ao laboratório') || status.startsWith('Enviado ao laboratório'));
+var currentFilters = {};
+var homeCurrentPage = 1;
+var homePagination = { page: 1, pages: 1, total: 0 };
 
 function emphasizeStatusPrefix(text) {
     if (!text) return '-';
@@ -353,6 +357,7 @@ async function loadHomeInstrumentos(passedFilters, pageOverride) {
         const params = new URLSearchParams();
         params.append('page', homeCurrentPage);
         params.append('per_page', HOME_PAGE_SIZE);
+        if (HOME_PMC_SCOPE) params.append('pmc_categoria', HOME_PMC_SCOPE);
         let hasActiveFilters = false;
         Object.entries(filters).forEach(([key, value]) => {
             if (value !== undefined && value !== null && value !== '') {
@@ -498,7 +503,7 @@ function attachFilterHandlers() {
     }
 }
 
-async function initHomeDashboard() {
+window.initHomeDashboard = async function() {
     await populateTipoFilter();
     attachFilterHandlers();
     setupHomePaginationControls();
@@ -620,6 +625,7 @@ async function refreshHomeInstrument(instId) {
         params.append('instrumento_id', instId);
         params.append('page', homeCurrentPage);
         params.append('per_page', HOME_PAGE_SIZE);
+        if (HOME_PMC_SCOPE) params.append('pmc_categoria', HOME_PMC_SCOPE);
         Object.entries(currentFilters).forEach(([key, value]) => {
             if (value !== undefined && value !== null && value !== '') {
                 params.append(key, value);
@@ -663,7 +669,7 @@ async function refreshHomeInstrument(instId) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    initHomeDashboard();
+    if (typeof window.initHomeDashboard === 'function') window.initHomeDashboard();
 });
 
 // Menu toggle behavior for per-row dropdowns
@@ -793,9 +799,9 @@ document.addEventListener('click', function(e){
 </div> -->
 
 <script>
-let pendingReceberPayload = null;
-let pendingReentregaInfo = null;
-let isSubmittingReceber = false;
+var pendingReceberPayload = null;
+var pendingReentregaInfo = null;
+var isSubmittingReceber = false;
 
 function openReceberModalHome(instrumentoId){
     document.getElementById('receberInstrumentoIdHome').value = instrumentoId;
@@ -1153,7 +1159,7 @@ function updateErroTotalHome(){
     }
 });
 
-let isSubmittingAnalisarHome = false;
+var isSubmittingAnalisarHome = false;
 
 function setAnalisarButtonLoading(state){
     const btn = document.getElementById('btnConfirmAnalisarHome');
@@ -1291,7 +1297,7 @@ document.addEventListener('click', function(e){
     openEnviarModalHome(instId);
 });
 
-let isSubmittingEnviarHome = false;
+var isSubmittingEnviarHome = false;
 
 document.getElementById('btnConfirmEnviarHome').addEventListener('click', async ()=>{
     if (isSubmittingEnviarHome) return;

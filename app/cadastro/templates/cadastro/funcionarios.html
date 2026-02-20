@@ -148,16 +148,16 @@
 </div>
 
 <script>
-let currentPage = 1;
-let searchTimeout;
-const csrfToken = '{{ csrf_token }}';
+window.funcCurrentPage = window.funcCurrentPage ?? 1;
+window.funcSearchTimeout = window.funcSearchTimeout ?? null;
+var csrfToken = '{{ csrf_token }}';
 
 document.addEventListener('DOMContentLoaded', function() {
-    loadFuncionarios();
-    loadSetores();
+    if (typeof window.loadFuncionarios === 'function') window.loadFuncionarios();
+    if (typeof window.loadSetoresForSelect === 'function') window.loadSetoresForSelect();
 });
 
-async function loadSetores() {
+window.loadSetoresForSelect = async function() {
     try {
         const resp = await fetch('/cadastro/api/setores/');
         const data = await resp.json();
@@ -174,8 +174,8 @@ async function loadSetores() {
     }
 }
 
-async function loadFuncionarios(page = 1) {
-    currentPage = page;
+window.loadFuncionarios = async function(page = 1) {
+    window.funcCurrentPage = page;
     const search = document.getElementById('searchInput').value;
     try {
         const resp = await fetch(`/cadastro/api/funcionarios/lista/?page=${page}&search=${encodeURIComponent(search)}`);
@@ -340,7 +340,7 @@ document.getElementById('funcForm').addEventListener('submit', async function(e)
         if (result.success) {
             showToast(result.message, 'success');
             closeModal();
-            loadFuncionarios(currentPage);
+            loadFuncionarios(window.funcCurrentPage);
         } else {
             showToast(result.message || 'Erro', 'error');
         }
@@ -364,7 +364,7 @@ async function confirmDelete() {
         if (result.success) {
             showToast(result.message, 'success');
             closeDeleteModal();
-            loadFuncionarios(currentPage);
+            loadFuncionarios(window.funcCurrentPage);
         } else {
             showToast(result.message || 'Erro', 'error');
         }

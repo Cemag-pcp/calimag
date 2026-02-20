@@ -105,13 +105,12 @@ function getCSRF() {
   return '';
 }
 
-let tiposCache = [];
-
-async function loadTipos() {
+window.tiposCache = window.tiposCache || [];
+window.loadTipos = async function() {
   const res = await fetch('/cadastro/api/tipos_instrumento/');
   const data = await res.json();
-  tiposCache = data.tipos || [];
-  renderTipos(tiposCache);
+  window.tiposCache = data.tipos || [];
+  renderTipos(window.tiposCache);
 }
 
 function renderTipos(tipos) {
@@ -133,7 +132,7 @@ function renderTipos(tipos) {
 
   document.querySelectorAll('.editBtn').forEach(b=>b.addEventListener('click', (e)=>{
     const id = e.currentTarget.dataset.id;
-    const tipo = tiposCache.find(x=>String(x.id)===String(id));
+    const tipo = window.tiposCache.find(x=>String(x.id)===String(id));
     openModal('Editar Tipo', tipo.descricao, tipo.documento_qualidade, true, id);
   }));
 
@@ -148,8 +147,8 @@ function renderTipos(tipos) {
 
 function searchTipos(){
   const q = document.getElementById('searchInput').value.trim().toLowerCase();
-  if (!q) return renderTipos(tiposCache);
-  renderTipos(tiposCache.filter(t=>t.descricao.toLowerCase().includes(q)));
+  if (!q) return renderTipos(window.tiposCache);
+  renderTipos(window.tiposCache.filter(t=>t.descricao.toLowerCase().includes(q)));
 }
 
 function openModal(title='', descricao='', documento_qualidade='', ativo=true, id=null){
@@ -212,7 +211,7 @@ function showToast(msg){
   setTimeout(()=>{ t.classList.add('hidden'); t.classList.remove('block'); }, 3000);
 }
 
-window.addEventListener('DOMContentLoaded', ()=>{ loadTipos(); });
+window.addEventListener('DOMContentLoaded', ()=>{ window.loadTipos(); });
 </script>
 
 {% endblock %}

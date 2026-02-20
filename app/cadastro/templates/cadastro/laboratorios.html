@@ -87,13 +87,12 @@ function getCSRF() {
   return '';
 }
 
-let labsCache = [];
-
-async function loadLabs(){
+window.labsCache = window.labsCache || [];
+window.loadLabs = async function(){
   const res = await fetch('/cadastro/api/laboratorios/');
   const data = await res.json();
-  labsCache = data.laboratorios || [];
-  renderLabs(labsCache);
+  window.labsCache = data.laboratorios || [];
+  renderLabs(window.labsCache);
 }
 
 function renderLabs(labs){
@@ -114,7 +113,7 @@ function renderLabs(labs){
 
   document.querySelectorAll('.editBtn').forEach(b=>b.addEventListener('click', (e)=>{
     const id = e.currentTarget.dataset.id;
-    const lab = labsCache.find(x=>String(x.id)===String(id));
+    const lab = window.labsCache.find(x=>String(x.id)===String(id));
     openModal('Editar Laboratório', lab.nome, true, id);
   }));
 
@@ -129,8 +128,8 @@ function renderLabs(labs){
 
 function searchLabs(){
   const q = document.getElementById('searchInput').value.trim().toLowerCase();
-  if (!q) return renderLabs(labsCache);
-  renderLabs(labsCache.filter(l=>l.nome.toLowerCase().includes(q)));
+  if (!q) return renderLabs(window.labsCache);
+  renderLabs(window.labsCache.filter(l=>l.nome.toLowerCase().includes(q)));
 }
 
 function openModal(title='', nome='', ativo=true, id=null){
@@ -183,7 +182,7 @@ function showToast(msg){
   setTimeout(()=>{ t.classList.add('hidden'); t.classList.remove('block'); }, 3000);
 }
 
-window.addEventListener('DOMContentLoaded', ()=>{ loadLabs(); });
+window.addEventListener('DOMContentLoaded', ()=>{ window.loadLabs(); });
 </script>
 
 {% endblock %}

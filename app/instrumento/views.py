@@ -24,6 +24,14 @@ from app.cadastro.models import Instrumento, Funcionario, PontoCalibracao
 from .models import FuncionarioInstrumento, AssinaturaFuncionarioInstrumento, StatusInstrumento, CertificadoCalibracao, StatusPontoCalibracao
 from app.cadastro.models import Laboratorio
 
+PMC_MAQUINAS_SOLDA_TIPOS = (
+	'maquina de solda a laser',
+	'maquina de solda digital',
+	'máquina de solda a laser',
+	'máquina de solda digital',
+)
+PMC_GABARITO_TIPO = 'gabarito'
+
 
 def _detect_csv_delimiter(sample_line):
 	"""Infer the delimiter used in a CSV sample line."""
@@ -64,6 +72,26 @@ def _parse_csv_datetime(raw_value):
 	return dt
 
 
+def _apply_pmc_categoria_filter(queryset, categoria):
+	"""Aplica filtro de categoria do menu PMC sobre tipo_instrumento.descricao."""
+	pmccat = (categoria or '').strip().lower()
+	if not pmccat:
+		return queryset
+
+	maquinas_q = Q()
+	for tipo in PMC_MAQUINAS_SOLDA_TIPOS:
+		maquinas_q |= Q(tipo_instrumento__descricao__iexact=tipo)
+	gabarito_q = Q(tipo_instrumento__descricao__iexact=PMC_GABARITO_TIPO)
+
+	if pmccat in {'maquinas_solda', 'maquinas-de-solda', 'solda'}:
+		return queryset.filter(maquinas_q)
+	if pmccat in {'gabaritos', 'gabarito'}:
+		return queryset.filter(gabarito_q)
+	if pmccat in {'instrumentos', 'instrumento'}:
+		return queryset.exclude(maquinas_q | gabarito_q)
+	return queryset
+
+
 @login_required
 @require_GET
 def instrumentos_status_api(request):
@@ -73,6 +101,7 @@ def instrumentos_status_api(request):
 		.filter(status='ativo')
 		.select_related('tipo_instrumento')
 	)
+	qs = _apply_pmc_categoria_filter(qs, request.GET.get('pmc_categoria'))
 
 	# =========================
 	# Filtros simples (DB)
@@ -328,6 +357,10 @@ def indicadores_dashboard(request):
 		status='ativo',
 		instrumento_controlado=True
 	)
+	active_instrumentos = _apply_pmc_categoria_filter(
+		active_instrumentos,
+		request.GET.get('pmc_categoria')
+	)
 
 	latest_status_qs = StatusInstrumento.objects.filter(
 		instrumento=OuterRef('pk')
@@ -394,7 +427,8 @@ def indicadores_dashboard(request):
 	active_points = PontoCalibracao.objects.filter(
 		ativo=True,
 		instrumento__status='ativo',
-		instrumento__instrumento_controlado=True
+		instrumento__instrumento_controlado=True,
+		instrumento_id__in=active_instrumentos.values('id')
 	).annotate(
 		ultima_analise_data=Subquery(ultima_analise_qs.values('data_criacao')[:1])
 	).values('instrumento_id', 'ultima_analise_data')

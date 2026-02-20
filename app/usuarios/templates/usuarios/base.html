@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Calimag - Sistema de Calibração{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
     <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
     <style>
@@ -31,7 +32,8 @@
         body.sidebar-collapsed #sidebar .sidebar-label {
             display: none;
         }
-        body.sidebar-collapsed #sidebar #cadastroArrow {
+        body.sidebar-collapsed #sidebar #cadastroArrow,
+        body.sidebar-collapsed #sidebar #pmcArrow {
             display: none;
         }
         #sidebarCollapseBtn span[data-label="collapsed"] {
@@ -42,6 +44,13 @@
         }
         body.sidebar-collapsed #sidebarCollapseBtn span[data-label="collapsed"] {
             display: inline;
+        }
+        #navIndicator {
+            opacity: 0;
+            transition: opacity 150ms ease;
+        }
+        #navIndicator.htmx-request {
+            opacity: 1;
         }
     </style>
 </head>
@@ -59,6 +68,8 @@
     {% endfor %}
 </div>
 {% endif %}
+
+<div id="navIndicator" class="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-sky-500 to-emerald-500 z-50 pointer-events-none"></div>
 
 
 <div class="min-h-screen flex relative">
@@ -78,17 +89,64 @@
             </button>
         </div>
 
-        <nav class="px-2 py-4 flex-1">
+        <nav class="px-2 py-4 flex-1"
+             hx-boost="true"
+             hx-target="#appContent"
+             hx-select="#appContent > *"
+             hx-swap="innerHTML"
+             hx-push-url="true"
+             hx-indicator="#navIndicator">
             <ul class="space-y-1 text-sm">
                 <li>
-                    <a href="{% url 'home' %}"
-                       class="sidebar-link block px-3 py-2 rounded hover:bg-gray-100 font-medium flex items-center gap-3">
-                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 11l8-6 8 6" />
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10v10h5v-5h4v5h5V10" />
+                    <button id="pmcToggle"
+                        type="button"
+                        class="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-100 font-medium">
+                        <span class="flex items-center gap-3">
+                            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 11l8-6 8 6" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10v10h5v-5h4v5h5V10" />
+                            </svg>
+                            <span class="sidebar-label">PMC</span>
+                        </span>
+                        <svg id="pmcArrow" class="w-4 h-4 transition-transform" fill="none"
+                             stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M19 9l-7 7-7-7" />
                         </svg>
-                        <span class="sidebar-label">PMC</span>
-                    </a>
+                    </button>
+
+                    <ul id="pmcMenu" class="mt-2 hidden text-sm">
+                        <li>
+                            <a href="{% url 'pmc_instrumentos' %}"
+                               class="sidebar-link block px-6 py-2 hover:bg-gray-50 flex items-center gap-3">
+                                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7l4 4-4 4" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5h8M12 12h8M12 19h8" />
+                                </svg>
+                                <span class="sidebar-label">Instrumentos</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'pmc_maquinas_solda' %}"
+                               class="sidebar-link block px-6 py-2 hover:bg-gray-50 flex items-center gap-3">
+                                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7l4 4-4 4" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5h8M12 12h8M12 19h8" />
+                                </svg>
+                                <span class="sidebar-label">Máquinas de solda</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'pmc_gabaritos' %}"
+                               class="sidebar-link block px-6 py-2 hover:bg-gray-50 flex items-center gap-3">
+                                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7l4 4-4 4" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5h8M12 12h8M12 19h8" />
+                                </svg>
+                                <span class="sidebar-label">Gabaritos</span>
+                            </a>
+                        </li>
+                    </ul>
                 </li>
                 <li>
                     <a href="{% url 'entregas' %}"
@@ -196,7 +254,7 @@
 
     <!-- Main -->
     <div class="flex-1 bg-gradient-to-br from-blue-50 to-indigo-100">
-        <main class="w-full px-6 sm:px-8 lg:px-10 py-8">
+        <main id="appContent" class="w-full px-6 sm:px-8 lg:px-10 py-8">
             {% block content %}{% endblock %}
         </main>
     </div>
@@ -204,18 +262,23 @@
 
 <script>
 (function () {
-    const toggle = document.getElementById('cadastroToggle');
-    const menu = document.getElementById('cadastroMenu');
-    const arrow = document.getElementById('cadastroArrow');
+    const cadastroToggle = document.getElementById('cadastroToggle');
+    const cadastroMenu = document.getElementById('cadastroMenu');
+    const cadastroArrow = document.getElementById('cadastroArrow');
+    const pmcToggle = document.getElementById('pmcToggle');
+    const pmcMenu = document.getElementById('pmcMenu');
+    const pmcArrow = document.getElementById('pmcArrow');
     const links = document.querySelectorAll('.sidebar-link');
     const collapseBtn = document.getElementById('sidebarCollapseBtn');
     const hamburgerBtn = document.getElementById('sidebarHamburger');
 
-    const SIDEBAR_KEY = 'calimag.sidebar.cadastro.open';
+    const CADASTRO_KEY = 'calimag.sidebar.cadastro.open';
+    const PMC_KEY = 'calimag.sidebar.pmc.open';
     const ACTIVE_KEY = 'calimag.sidebar.active.href';
     const COLLAPSE_KEY = 'calimag.sidebar.collapsed';
 
-    function setCadastroOpen(open) {
+    function setMenuOpen(menu, arrow, open, storageKey) {
+        if (!menu || !arrow) return;
         if (open) {
             menu.classList.remove('hidden');
             arrow.classList.add('rotate-180');
@@ -223,7 +286,7 @@
             menu.classList.add('hidden');
             arrow.classList.remove('rotate-180');
         }
-        localStorage.setItem(SIDEBAR_KEY, open ? '1' : '0');
+        localStorage.setItem(storageKey, open ? '1' : '0');
     }
 
     function setSidebarCollapsed(collapsed) {
@@ -232,12 +295,21 @@
     }
 
     // Restore states
-    setCadastroOpen(localStorage.getItem(SIDEBAR_KEY) === '1');
+    setMenuOpen(cadastroMenu, cadastroArrow, localStorage.getItem(CADASTRO_KEY) === '1', CADASTRO_KEY);
+    setMenuOpen(pmcMenu, pmcArrow, localStorage.getItem(PMC_KEY) === '1', PMC_KEY);
     setSidebarCollapsed(localStorage.getItem(COLLAPSE_KEY) === '1');
 
-    toggle.addEventListener('click', () => {
-        setCadastroOpen(menu.classList.contains('hidden'));
-    });
+    if (cadastroToggle) {
+        cadastroToggle.addEventListener('click', () => {
+            setMenuOpen(cadastroMenu, cadastroArrow, cadastroMenu.classList.contains('hidden'), CADASTRO_KEY);
+        });
+    }
+
+    if (pmcToggle) {
+        pmcToggle.addEventListener('click', () => {
+            setMenuOpen(pmcMenu, pmcArrow, pmcMenu.classList.contains('hidden'), PMC_KEY);
+        });
+    }
 
     function toggleSidebar() {
         const collapsed = document.body.classList.contains('sidebar-collapsed');
@@ -248,31 +320,35 @@
     if (hamburgerBtn) hamburgerBtn.addEventListener('click', toggleSidebar);
 
     // Active link
-    const currentPath = window.location.pathname.replace(/\/$/, '');
-
-    links.forEach(link => {
-        const href = link.getAttribute('href').replace(/\/$/, '');
-
-        if (href === currentPath) {
-            link.classList.add('bg-blue-50', 'text-blue-700', 'font-semibold');
-            if (menu.contains(link)) setCadastroOpen(true);
-        }
-
-        link.addEventListener('click', () => {
-            localStorage.setItem(ACTIVE_KEY, href);
-        });
-    });
-
-    // Fallback restore
-    const saved = localStorage.getItem(ACTIVE_KEY);
-    if (saved) {
+    function markActiveLink(pathname) {
+        const normalizedPath = (pathname || '/').replace(/\/$/, '') || '/';
         links.forEach(link => {
-            if (link.getAttribute('href') === saved) {
+            link.classList.remove('bg-blue-50', 'text-blue-700', 'font-semibold');
+            const href = link.getAttribute('href').replace(/\/$/, '') || '/';
+            if (href === normalizedPath) {
                 link.classList.add('bg-blue-50', 'text-blue-700', 'font-semibold');
-                if (menu.contains(link)) setCadastroOpen(true);
+                if (cadastroMenu && cadastroMenu.contains(link)) {
+                    setMenuOpen(cadastroMenu, cadastroArrow, true, CADASTRO_KEY);
+                }
+                if (pmcMenu && pmcMenu.contains(link)) {
+                    setMenuOpen(pmcMenu, pmcArrow, true, PMC_KEY);
+                }
+                localStorage.setItem(ACTIVE_KEY, href);
             }
         });
     }
+
+    markActiveLink(window.location.pathname.replace(/\/$/, ''));
+
+    const saved = localStorage.getItem(ACTIVE_KEY);
+    if (saved) {
+        markActiveLink(saved);
+    }
+
+    document.body.addEventListener('htmx:afterSwap', (event) => {
+        if (!event.detail || !event.detail.target || event.detail.target.id !== 'appContent') return;
+        markActiveLink(window.location.pathname.replace(/\/$/, ''));
+    });
 })();
 </script>
 
@@ -299,9 +375,155 @@ function initChoicesForAll(selector = '[data-choices]') {
     });
 }
 
+function runPageInits() {
+    console.log('[runPageInits] Iniciando...');
+    const content = document.getElementById('appContent');
+    if (!content) {
+        console.warn('[runPageInits] #appContent não encontrado!');
+        return;
+    }
+
+    const hasHomeTable = content.querySelector('#homeInstrumentosTable');
+    const hasEntregasTable = content.querySelector('#entregasBody');
+    const hasLabsTable = content.querySelector('#labsBody');
+    const hasTiposTable = content.querySelector('#tiposBody');
+    const hasInstrumentosTable = content.querySelector('#instrumentosTable');
+    const hasFuncionariosTable = content.querySelector('#funcionariosTable');
+    const hasSetoresTable = content.querySelector('#setoresBody');
+
+    console.log('[runPageInits] Tabelas encontradas:', {
+        hasHomeTable: !!hasHomeTable,
+        hasEntregasTable: !!hasEntregasTable,
+        hasLabsTable: !!hasLabsTable,
+        hasTiposTable: !!hasTiposTable,
+        hasInstrumentosTable: !!hasInstrumentosTable,
+        hasFuncionariosTable: !!hasFuncionariosTable,
+        hasSetoresTable: !!hasSetoresTable
+    });
+
+    let currentPage = null;
+    if (hasHomeTable) currentPage = 'home';
+    else if (hasEntregasTable) currentPage = 'entregas';
+    else if (hasLabsTable) currentPage = 'labs';
+    else if (hasTiposTable) currentPage = 'tipos';
+    else if (hasInstrumentosTable) currentPage = 'instrumentos';
+    else if (hasFuncionariosTable) currentPage = 'funcionarios';
+    else if (hasSetoresTable) currentPage = 'setores';
+
+    console.log('[runPageInits] Página detectada:', currentPage);
+
+    // Skip if the same page was already initialized (prevents double initialization on DOMContentLoaded + htmx:afterSwap)
+    // But always allow re-initialization when navigating between different pages
+    const previousPage = content.dataset.pageInited;
+    if (currentPage && previousPage === currentPage && !content.dataset.htmxSwapped) {
+        console.log('[runPageInits] Página já inicializada, pulando...');
+        return;
+    }
+    
+    // Mark that we're processing an HTMX swap, and clear it after initialization
+    if (content.dataset.htmxSwapped) {
+        console.log('[runPageInits] Processando swap HTMX');
+        delete content.dataset.htmxSwapped;
+    }
+
+    if (hasHomeTable && typeof window.initHomeDashboard === 'function') {
+        console.log('[runPageInits] Inicializando Home Dashboard');
+        window.initHomeDashboard();
+    }
+
+    if (hasEntregasTable) {
+        console.log('[runPageInits] Inicializando Entregas');
+        if (typeof window.setupEntregasPaginationControls === 'function') {
+            window.setupEntregasPaginationControls();
+        }
+        if (typeof window.loadEntregas === 'function') {
+            window.loadEntregas({ pageOverride: 1, updateFilters: true });
+        }
+        if (typeof window.refreshDevolucaoCache === 'function') {
+            window.refreshDevolucaoCache(true);
+        }
+        if (typeof window.handlePendingDesignationPrefill === 'function') {
+            window.handlePendingDesignationPrefill();
+        }
+    }
+
+    if (hasLabsTable && typeof window.loadLabs === 'function') {
+        console.log('[runPageInits] Inicializando Labs');
+        console.log('[runPageInits] window.loadLabs existe?', typeof window.loadLabs);
+        window.loadLabs();
+    }
+
+    if (hasTiposTable && typeof window.loadTipos === 'function') {
+        console.log('[runPageInits] Inicializando Tipos');
+        console.log('[runPageInits] window.loadTipos existe?', typeof window.loadTipos);
+        window.loadTipos();
+    }
+
+    if (hasInstrumentosTable) {
+        console.log('[runPageInits] Inicializando Instrumentos');
+        if (typeof window.loadInstrumentos === 'function') {
+            window.loadInstrumentos();
+        }
+        if (typeof window.loadTiposInstrumento === 'function') {
+            window.loadTiposInstrumento();
+        }
+        if (typeof window.setupInstrumentoFilters === 'function') {
+            window.setupInstrumentoFilters();
+        }
+    }
+
+    if (hasFuncionariosTable) {
+        console.log('[runPageInits] Inicializando Funcionários');
+        console.log('[runPageInits] window.loadFuncionarios existe?', typeof window.loadFuncionarios);
+        console.log('[runPageInits] window.loadSetoresForSelect existe?', typeof window.loadSetoresForSelect);
+        if (typeof window.loadFuncionarios === 'function') {
+            console.log('[runPageInits] Chamando window.loadFuncionarios()...');
+            window.loadFuncionarios();
+        } else {
+            console.error('[runPageInits] window.loadFuncionarios NÃO É UMA FUNÇÃO!');
+        }
+        if (typeof window.loadSetoresForSelect === 'function') {
+            window.loadSetoresForSelect();
+        }
+    }
+
+    if (hasSetoresTable && typeof window.loadSetores === 'function') {
+        console.log('[runPageInits] Inicializando Setores');
+        window.loadSetores();
+    }
+
+    if (currentPage) {
+        content.dataset.pageInited = currentPage;
+    } else {
+        delete content.dataset.pageInited;
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    if (typeof Choices === 'undefined') return;
-    initChoicesForAll();
+    if (typeof Choices !== 'undefined') {
+        initChoicesForAll();
+    }
+    runPageInits();
+});
+
+document.body.addEventListener('htmx:afterSettle', (event) => {
+    if (!event.detail || !event.detail.target || event.detail.target.id !== 'appContent') return;
+    console.log('[HTMX] afterSettle disparado! (conteudo e scripts prontos)', event);
+    console.log('[HTMX] Target:', event.detail.target);
+    
+    // Mark the content as swapped by HTMX to force re-initialization
+    const content = document.getElementById('appContent');
+    if (content) {
+        console.log('[HTMX] Marcando content como swapped');
+        content.dataset.htmxSwapped = 'true';
+    } else {
+        console.warn('[HTMX] #appContent não encontrado no afterSettle!');
+    }
+    
+    if (typeof Choices !== 'undefined') {
+        initChoicesForAll();
+    }
+    runPageInits();
 });
 </script>
 

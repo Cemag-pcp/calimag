@@ -477,20 +477,20 @@
 </div>
 
 <script>
-let currentPage = 1;
-let searchTimeout;
-const csrfToken = '{{ csrf_token }}';
+window.instCurrentPage = window.instCurrentPage ?? 1;
+window.instSearchTimeout = window.instSearchTimeout ?? null;
+var csrfToken = '{{ csrf_token }}';
 
 // Load instrumentos on page load
 document.addEventListener('DOMContentLoaded', function() {
-    loadInstrumentos();
-    loadTiposInstrumento();
-    setupInstrumentoFilters();
+    if (typeof window.loadInstrumentos === 'function') window.loadInstrumentos();
+    if (typeof window.loadTiposInstrumento === 'function') window.loadTiposInstrumento();
+    if (typeof window.setupInstrumentoFilters === 'function') window.setupInstrumentoFilters();
 });
 
 // Load Instrumentos
-async function loadInstrumentos(page = 1) {
-    currentPage = page;
+window.loadInstrumentos = async function(page = 1) {
+    window.instCurrentPage = page;
     const query = buildInstrumentosQuery(page);
     
     try {
@@ -782,7 +782,7 @@ document.getElementById('instrumentoForm').addEventListener('submit', async func
         if (result.success) {
             showToast(result.message, 'success');
             closeModal();
-            loadInstrumentos(currentPage);
+            loadInstrumentos(window.instCurrentPage);
         } else {
             showToast(result.message, 'error');
         }
@@ -814,7 +814,7 @@ async function confirmDelete() {
         if (result.success) {
             showToast(result.message, 'success');
             closeDeleteModal();
-            loadInstrumentos(currentPage);
+            loadInstrumentos(window.instCurrentPage);
         } else {
             showToast(result.message, 'error');
         }
@@ -854,7 +854,7 @@ async function openPontosModal(instrumentoId, codigo) {
 
 function closePontosModal() {
     document.getElementById('pontosModal').classList.add('hidden');
-    loadInstrumentos(currentPage); // Recarregar para atualizar contagem de pontos
+    loadInstrumentos(window.instCurrentPage); // Recarregar para atualizar contagem de pontos
 }
 
 // Load Pontos
@@ -1075,7 +1075,7 @@ async function confirmDeletePonto() {
 // ============================================
 
 // temp storage for chosen assignments
-let designItems = [];
+var designItems = [];
 
 function openDesignationModal() {
     // load selects
@@ -1155,28 +1155,31 @@ function closeSignatureModal() {
     document.getElementById('signatureModal').classList.add('hidden');
 }
 
-// signature canvas
-let sigCanvas, sigCtx, drawing = false;
-function setupSignatureCanvas() {
-    sigCanvas = document.getElementById('signatureCanvas');
-    sigCtx = sigCanvas.getContext('2d');
-    sigCanvas.width = sigCanvas.clientWidth;
-    sigCanvas.height = 200;
-    sigCtx.fillStyle = '#fff';
-    sigCtx.fillRect(0,0,sigCanvas.width,sigCanvas.height);
-    sigCtx.strokeStyle = '#000';
-    sigCtx.lineWidth = 2;
+// signature canvas - use window to avoid redeclaration on HTMX swaps
+window.sigCanvas = window.sigCanvas || null;
+window.sigCtx = window.sigCtx || null;
+window.sigDrawing = window.sigDrawing || false;
 
-    sigCanvas.onpointerdown = (e) => { drawing = true; sigCtx.beginPath(); sigCtx.moveTo(e.offsetX, e.offsetY); };
-    sigCanvas.onpointermove = (e) => { if (!drawing) return; sigCtx.lineTo(e.offsetX, e.offsetY); sigCtx.stroke(); };
-    sigCanvas.onpointerup = () => { drawing = false; };
+function setupSignatureCanvas() {
+    window.sigCanvas = document.getElementById('signatureCanvas');
+    window.sigCtx = window.sigCanvas.getContext('2d');
+    window.sigCanvas.width = window.sigCanvas.clientWidth;
+    window.sigCanvas.height = 200;
+    window.sigCtx.fillStyle = '#fff';
+    window.sigCtx.fillRect(0,0,window.sigCanvas.width,window.sigCanvas.height);
+    window.sigCtx.strokeStyle = '#000';
+    window.sigCtx.lineWidth = 2;
+
+    window.sigCanvas.onpointerdown = (e) => { window.sigDrawing = true; window.sigCtx.beginPath(); window.sigCtx.moveTo(e.offsetX, e.offsetY); };
+    window.sigCanvas.onpointermove = (e) => { if (!window.sigDrawing) return; window.sigCtx.lineTo(e.offsetX, e.offsetY); window.sigCtx.stroke(); };
+    window.sigCanvas.onpointerup = () => { window.sigDrawing = false; };
 }
 
-function clearSignature() { if (sigCtx) { sigCtx.clearRect(0,0,sigCanvas.width,sigCanvas.height); sigCtx.fillStyle='#fff'; sigCtx.fillRect(0,0,sigCanvas.width,sigCanvas.height); } }
+function clearSignature() { if (window.sigCtx) { window.sigCtx.clearRect(0,0,window.sigCanvas.width,window.sigCanvas.height); window.sigCtx.fillStyle='#fff'; window.sigCtx.fillRect(0,0,window.sigCanvas.width,window.sigCanvas.height); } }
 
 async function submitDesignWithSignature() {
     // get dataURL
-    const dataUrl = sigCanvas.toDataURL('image/png');
+    const dataUrl = window.sigCanvas.toDataURL('image/png');
     const promises = designItems.map(item => {
         return fetch('/instrumentos/api/designar/', {
             method: 'POST',
@@ -1204,7 +1207,7 @@ async function submitDesignWithSignature() {
             renderDesignTable();
             closeSignatureModal();
             closeDesignationModal();
-            loadInstrumentos(currentPage);
+            loadInstrumentos(window.instCurrentPage);
         }
     } catch (e) {
         showToast('Erro ao enviar designações', 'error');
