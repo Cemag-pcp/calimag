@@ -129,7 +129,7 @@
 
         <div>
             <div class="border rounded p-2">
-                <canvas id="signatureCanvas" class="w-full" style="height:200px;"></canvas>
+                <canvas id="signatureCanvas" class="w-full touch-none" style="height:200px; touch-action:none;"></canvas>
             </div>
             <div class="mt-3 flex justify-between">
                 <button onclick="clearSignature()" class="px-4 py-2 border rounded">Limpar</button>
@@ -370,6 +370,17 @@ function closeSignatureModal() {
 window.sigCanvas = window.sigCanvas || null;
 window.sigCtx = window.sigCtx || null;
 window.sigDrawing = window.sigDrawing || false;
+window.sigPointerId = window.sigPointerId || null;
+
+function getSignaturePoint(event) {
+    const rect = window.sigCanvas.getBoundingClientRect();
+    const scaleX = window.sigCanvas.width / rect.width;
+    const scaleY = window.sigCanvas.height / rect.height;
+    return {
+        x: (event.clientX - rect.left) * scaleX,
+        y: (event.clientY - rect.top) * scaleY
+    };
+}
 
 function setupSignatureCanvas() {
     window.sigCanvas = document.getElementById('signatureCanvas');
@@ -380,10 +391,40 @@ function setupSignatureCanvas() {
     window.sigCtx.fillRect(0,0,window.sigCanvas.width,window.sigCanvas.height);
     window.sigCtx.strokeStyle = '#000';
     window.sigCtx.lineWidth = 2;
+    window.sigCtx.lineCap = 'round';
+    window.sigCtx.lineJoin = 'round';
 
-    window.sigCanvas.onpointerdown = (e) => { window.sigDrawing = true; window.sigCtx.beginPath(); window.sigCtx.moveTo(e.offsetX, e.offsetY); };
-    window.sigCanvas.onpointermove = (e) => { if (!window.sigDrawing) return; window.sigCtx.lineTo(e.offsetX, e.offsetY); window.sigCtx.stroke(); };
-    window.sigCanvas.onpointerup = () => { window.sigDrawing = false; };
+    window.sigCanvas.onpointerdown = (e) => {
+        e.preventDefault();
+        const point = getSignaturePoint(e);
+        window.sigDrawing = true;
+        window.sigPointerId = e.pointerId;
+        if (window.sigCanvas.setPointerCapture) {
+            window.sigCanvas.setPointerCapture(e.pointerId);
+        }
+        window.sigCtx.beginPath();
+        window.sigCtx.moveTo(point.x, point.y);
+    };
+    window.sigCanvas.onpointermove = (e) => {
+        if (!window.sigDrawing || (window.sigPointerId !== null && e.pointerId !== window.sigPointerId)) return;
+        e.preventDefault();
+        const point = getSignaturePoint(e);
+        window.sigCtx.lineTo(point.x, point.y);
+        window.sigCtx.stroke();
+    };
+    window.sigCanvas.onpointerup = (e) => {
+        if (window.sigPointerId !== null && e.pointerId !== window.sigPointerId) return;
+        window.sigDrawing = false;
+        window.sigPointerId = null;
+    };
+    window.sigCanvas.onpointercancel = () => {
+        window.sigDrawing = false;
+        window.sigPointerId = null;
+    };
+    window.sigCanvas.onpointerleave = () => {
+        window.sigDrawing = false;
+        window.sigPointerId = null;
+    };
 }
 
 function clearSignature() {
