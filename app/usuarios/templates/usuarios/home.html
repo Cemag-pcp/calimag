@@ -67,18 +67,18 @@
                                 <option value="">Todos os tipos</option>
                             </select>
                         </label>
-                        <label class="block">
-                            <span class="block text-xs text-gray-600 mb-1">Instrumento controlado</span>
-                            <select id="filterInstrumentoControlado" class="w-full px-2 py-1.5 border border-gray-300 rounded-md">
-                                <option value="">Todos</option>
-                                <option value="1">Apenas controlados</option>
-                                <option value="0">Apenas não controlados</option>
-                            </select>
-                        </label>
-                        <label class="block">
-                            <span class="block text-xs text-gray-600 mb-1">Funcionário</span>
-                            <input id="filterFuncionario" type="text" class="w-full px-2 py-1.5 border border-gray-300 rounded-md" placeholder="Nome do colaborador" />
-                        </label>
+                        <div class="grid gap-3 sm:grid-cols-2">
+                            <label class="block">
+                                <span class="block text-xs text-gray-600 mb-1">Funcionário</span>
+                                <input id="filterFuncionario" type="text" class="w-full px-2 py-1.5 border border-gray-300 rounded-md" placeholder="Nome do colaborador" />
+                            </label>
+                            <label class="block">
+                                <span class="block text-xs text-gray-600 mb-1">Setor</span>
+                                <select id="filterSetor" class="w-full px-2 py-1.5 border border-gray-300 rounded-md">
+                                    <option value="">Todos os setores</option>
+                                </select>
+                            </label>
+                        </div>
                     </div>
                 </section>
                 <section class="space-y-3">
@@ -103,6 +103,20 @@
                                 <option value="sem_analise">Sem análise</option>
                             </select>
                         </label>
+                        <label class="block">
+                            <span class="block text-xs text-gray-600 mb-1">Info. adic.</span>
+                            <select id="filterInfoAdic" class="w-full px-2 py-1.5 border border-gray-300 rounded-md">
+                                <option value="">Todas as descrições</option>
+                            </select>
+                        </label>
+                        <label class="block">
+                            <span class="block text-xs text-gray-600 mb-1">Instrumento controlado</span>
+                            <select id="filterInstrumentoControlado" class="w-full px-2 py-1.5 border border-gray-300 rounded-md">
+                                <option value="">Todos</option>
+                                <option value="1">Apenas controlados</option>
+                                <option value="0">Apenas não controlados</option>
+                            </select>
+                        </label>
                     </div>
                     <div class="mt-2">
                         <span class="block text-xs text-gray-600 mb-1">Validade</span>
@@ -121,28 +135,58 @@
                         <input id="filterPontosPendentes" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
                         <span>Instrumentos aguardando análise</span>
                     </label>
-                    <div class="flex flex-wrap justify-end gap-3 pt-2">
-                        <!-- <button id="clearFiltersBtn" type="button" class="px-4 py-2 border border-gray-300 rounded-lg text-sm">Limpar filtros</button> -->
-                        <button id="applyFiltersBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm">Aplicar filtros</button>
-                    </div>
                 </section>
+                <div class="md:col-span-2 flex justify-end border-t border-gray-200 pt-4">
+                    <!-- <button id="clearFiltersBtn" type="button" class="px-4 py-2 border border-gray-300 rounded-lg text-sm">Limpar filtros</button> -->
+                    <button id="applyFiltersBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm">Aplicar filtros</button>
+                </div>
             </form>
         </div>
+        <div class="mb-3 flex items-center justify-end gap-2">
+            <div class="relative">
+                <button
+                    id="homeColumnVisibilityBtn"
+                    type="button"
+                    class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 shadow-sm transition hover:bg-gray-50"
+                    aria-label="Visualização de colunas"
+                    title="Visualização de colunas">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h18M3 12h18M3 19h18" />
+                    </svg>
+                </button>
+                <div id="homeColumnVisibilityMenu" class="absolute right-0 z-20 mt-2 hidden min-w-64 rounded-lg border border-gray-200 bg-white p-3 shadow-lg">
+                    <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Colunas visíveis</p>
+                    <div id="homeColumnVisibilityOptions" class="space-y-2 text-sm text-gray-700"></div>
+                </div>
+            </div>
+            <button
+                id="exportHomeCsvBtn"
+                type="button"
+                class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label="Exportar CSV"
+                title="Exportar CSV">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m0 0l4-4m-4 4l-4-4M5 21h14" />
+                </svg>
+            </button>
+        </div>
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
+            <table class="min-w-full divide-y divide-gray-200 text-xs">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Código</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Instrumento controlado</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Funcionário</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Última atualização</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status da calibração</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pontos analisados</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Última calibração</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Válido até</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Último certificado</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ações</th>
+                        <th data-col="codigo" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Código</th>
+                        <th data-col="info_adic" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Info. adic.</th>
+                        <th data-col="tipo" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
+                        <th data-col="controlado" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Instrumento controlado</th>
+                        <th data-col="funcionario" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Funcionário</th>
+                        <th data-col="setor" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Setor</th>
+                        <th data-col="ultima_atualizacao" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Última atualização</th>
+                        <th data-col="status_calibracao" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status da calibração</th>
+                        <th data-col="pontos_analisados" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pontos analisados</th>
+                        <th data-col="ultima_calibracao" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Última calibração</th>
+                        <th data-col="valido_ate" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Válido até</th>
+                        <th data-col="ultimo_certificado" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Último certificado</th>
+                        <th data-col="acoes" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ações</th>
                     </tr>
                 </thead>
                 <tbody id="homeInstrumentosTable" class="bg-white divide-y divide-gray-200"></tbody>
@@ -162,7 +206,121 @@
 var HOME_PAGE_SIZE = 15;
 var ENTREGA_PREFILL_STORAGE_KEY = window.ENTREGA_PREFILL_STORAGE_KEY || 'calibracao_entrega_prefill';
 var HOME_PMC_SCOPE = '{{ pmc_scope|default:"instrumentos" }}';
+var HOME_COLUMN_PREFS_STORAGE_KEY = 'calimag.home.columnVisibility';
+var HOME_TABLE_COLUMNS = [
+    { key: 'codigo', label: 'Código' },
+    { key: 'info_adic', label: 'Info. adic.' },
+    { key: 'tipo', label: 'Tipo' },
+    { key: 'controlado', label: 'Instrumento controlado' },
+    { key: 'funcionario', label: 'Funcionário' },
+    { key: 'setor', label: 'Setor' },
+    { key: 'ultima_atualizacao', label: 'Última atualização' },
+    { key: 'status_calibracao', label: 'Status da calibração' },
+    { key: 'pontos_analisados', label: 'Pontos analisados' },
+    { key: 'ultima_calibracao', label: 'Última calibração' },
+    { key: 'valido_ate', label: 'Válido até' },
+    { key: 'ultimo_certificado', label: 'Último certificado' },
+    { key: 'acoes', label: 'Ações' }
+];
+var homeColumnVisibility = {};
+var homeInfoAdicChoices = null;
+var homeTipoChoices = null;
+var homeSetorChoices = null;
 window.ENTREGA_PREFILL_STORAGE_KEY = ENTREGA_PREFILL_STORAGE_KEY;
+function loadHomeColumnVisibility() {
+    const defaults = Object.fromEntries(HOME_TABLE_COLUMNS.map(col => [col.key, true]));
+    try {
+        const raw = localStorage.getItem(HOME_COLUMN_PREFS_STORAGE_KEY);
+        if (!raw) return defaults;
+        const parsed = JSON.parse(raw);
+        HOME_TABLE_COLUMNS.forEach(col => {
+            if (typeof parsed[col.key] !== 'boolean') {
+                parsed[col.key] = true;
+            }
+        });
+        return parsed;
+    } catch (error) {
+        console.error('Erro ao carregar preferências de colunas:', error);
+        return defaults;
+    }
+}
+
+function saveHomeColumnVisibility() {
+    localStorage.setItem(HOME_COLUMN_PREFS_STORAGE_KEY, JSON.stringify(homeColumnVisibility));
+}
+
+function getHomeVisibleColumnCount() {
+    const count = HOME_TABLE_COLUMNS.filter(col => homeColumnVisibility[col.key] !== false).length;
+    return Math.max(1, count);
+}
+
+function isHomeColumnVisible(columnKey) {
+    return homeColumnVisibility[columnKey] !== false;
+}
+
+function applyHomeColumnVisibility() {
+    document.querySelectorAll('[data-col]').forEach(node => {
+        const key = node.dataset.col;
+        node.classList.toggle('hidden', !isHomeColumnVisible(key));
+    });
+
+    document.querySelectorAll('[data-home-detail-colspan]').forEach(node => {
+        node.colSpan = getHomeVisibleColumnCount();
+    });
+}
+
+function renderHomeColumnVisibilityOptions() {
+    const container = document.getElementById('homeColumnVisibilityOptions');
+    if (!container) return;
+
+    container.innerHTML = HOME_TABLE_COLUMNS.map(col => `
+        <label class="flex items-center gap-2">
+            <input type="checkbox" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" data-column-toggle="${col.key}" ${isHomeColumnVisible(col.key) ? 'checked' : ''} />
+            <span>${col.label}</span>
+        </label>
+    `).join('');
+
+    container.querySelectorAll('[data-column-toggle]').forEach(input => {
+        input.addEventListener('change', (event) => {
+            const key = event.target.dataset.columnToggle;
+            const checked = event.target.checked;
+            const visibleCount = HOME_TABLE_COLUMNS.filter(col => col.key !== key && isHomeColumnVisible(col.key)).length;
+
+            if (!checked && visibleCount === 0) {
+                event.target.checked = true;
+                return;
+            }
+
+            homeColumnVisibility[key] = checked;
+            saveHomeColumnVisibility();
+            applyHomeColumnVisibility();
+        });
+    });
+}
+
+function setupHomeColumnVisibilityControl() {
+    const trigger = document.getElementById('homeColumnVisibilityBtn');
+    const menu = document.getElementById('homeColumnVisibilityMenu');
+    if (!trigger || !menu || trigger.dataset.bound === '1') return;
+
+    trigger.dataset.bound = '1';
+    renderHomeColumnVisibilityOptions();
+    applyHomeColumnVisibility();
+
+    trigger.addEventListener('click', (event) => {
+        event.stopPropagation();
+        menu.classList.toggle('hidden');
+    });
+
+    menu.addEventListener('click', (event) => {
+        event.stopPropagation();
+    });
+
+    document.addEventListener('click', () => {
+        menu.classList.add('hidden');
+    });
+}
+
 async function loadIndicadoresDashboard() {
     const pontosEl = document.getElementById('indicadorPontosPendentes');
     const operacaoEl = document.getElementById('indicadorOperacao');
@@ -268,32 +426,35 @@ function buildInstrumentRow(inst) {
         ? `Entregue para: ${inst.status_obj.funcionario}`
         : (inst.status || '-');
     const formattedUpdateText = emphasizeStatusPrefix(rawUpdateText);
+    const funcionarioSetor = hasActiveFuncionario ? (inst.status_obj.funcionario_setor || '-') : '-';
 
     return `
         <tr class="hover:bg-gray-50" id="inst-row-${inst.id}">
-            <td class="px-6 py-4">${inst.codigo}</td>
-            <td class="px-6 py-4">${inst.tipo || '-'}</td>
-            <td class="px-6 py-4">
+            <td data-col="codigo" class="px-6 py-4">${inst.codigo}</td>
+            <td data-col="info_adic" class="px-6 py-4">${inst.descricao || '-'}</td>
+            <td data-col="tipo" class="px-6 py-4">${inst.tipo || '-'}</td>
+            <td data-col="controlado" class="px-6 py-4">
                 <span class="px-2 py-1 text-xs font-semibold rounded-full ${controlBadge.cls}">${controlBadge.text}</span>
             </td>
-            <td class="px-6 py-4">${hasActiveFuncionario ? inst.status_obj.funcionario : '-'}</td>
-            <td class="px-6 py-4">
+            <td data-col="funcionario" class="px-6 py-4">${hasActiveFuncionario ? inst.status_obj.funcionario : '-'}</td>
+            <td data-col="setor" class="px-6 py-4">${funcionarioSetor}</td>
+            <td data-col="ultima_atualizacao" class="px-6 py-4">
                 ${formattedUpdateText}
             </td>
-            <td class="px-6 py-4">
+            <td data-col="status_calibracao" class="px-6 py-4">
                 <span class="px-2 py-1 text-xs font-semibold rounded-full ${statusBadge.cls}">${statusBadge.text}</span>
             </td>
-            <td class="px-6 py-4">
+            <td data-col="pontos_analisados" class="px-6 py-4">
                 <span class="px-2 py-1 text-xs font-semibold rounded-full ${pontosBadge.cls}">${pontosBadge.text}</span>
             </td>
-            <td class="px-6 py-4">${inst.ultima_calibracao ? new Date(inst.ultima_calibracao).toLocaleDateString() : '-'}</td>
-            <td class="px-6 py-4">${inst.valid_until ? new Date(inst.valid_until).toLocaleDateString() : '-'}</td>
-            <td class="px-6 py-4">
+            <td data-col="ultima_calibracao" class="px-6 py-4">${inst.ultima_calibracao ? new Date(inst.ultima_calibracao).toLocaleDateString() : '-'}</td>
+            <td data-col="valido_ate" class="px-6 py-4">${inst.valid_until ? new Date(inst.valid_until).toLocaleDateString() : '-'}</td>
+            <td data-col="ultimo_certificado" class="px-6 py-4">
                 ${inst.ultimo_certificado
                     ? `<a class="text-indigo-600 hover:text-indigo-800 underline" href="${inst.ultimo_certificado}" target="_blank" rel="noopener noreferrer">Abrir certificado</a>`
                     : '-'}
             </td>
-            <td class="px-6 py-4 text-right">
+            <td data-col="acoes" class="px-6 py-4 text-right">
                 <div class="inline-flex items-center gap-2">
                     <button onclick="togglePontos(${inst.id})" class="inline-flex items-center justify-center rounded-md border border-gray-300 shadow-sm px-2 py-1 bg-white text-sm text-blue-600 hover:bg-gray-50">
                         Faixas de calibração
@@ -325,7 +486,7 @@ function buildInstrumentRow(inst) {
             </td>
         </tr>
         <tr id="inst-pontos-${inst.id}" class="hidden">
-            <td colspan="11" class="px-6 py-4 bg-gray-50" id="inst-pontos-container-${inst.id}" data-analyzable="${isAnalyzable ? '1' : '0'}" data-last-envio="${inst.data_ultimo_envio || ''}"></td>
+            <td colspan="${getHomeVisibleColumnCount()}" data-home-detail-colspan="1" class="px-6 py-4 bg-gray-50" id="inst-pontos-container-${inst.id}" data-analyzable="${isAnalyzable ? '1' : '0'}" data-last-envio="${inst.data_ultimo_envio || ''}"></td>
         </tr>
     `;
 }
@@ -335,7 +496,7 @@ function showHomeTableLoading() {
     if (!tbody) return;
     tbody.innerHTML = `
         <tr>
-            <td colspan="11" class="px-6 py-8 text-center">
+            <td colspan="${getHomeVisibleColumnCount()}" data-home-detail-colspan="1" class="px-6 py-8 text-center">
                 <div class="flex flex-col items-center gap-3 text-gray-500">
                     <svg class="h-6 w-6 animate-spin text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -345,6 +506,166 @@ function showHomeTableLoading() {
                 </div>
             </td>
         </tr>`;
+}
+
+function formatHomeDate(value) {
+    if (!value) return '-';
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return '-';
+    return parsed.toLocaleDateString('pt-BR');
+}
+
+function getHomeCalibrationStatusLabel(inst) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const statusKey = inst.calibration_status || null;
+    if (statusKey === 'em_dia') return 'Em dia';
+    if (statusKey === 'a_calibrar') return 'A calibrar';
+    if (statusKey === 'atrasado') return 'Atrasado';
+    if (statusKey === 'sem_analise') return 'Sem análise';
+    if (!inst.valid_until) return 'Sem análise';
+
+    const validDate = new Date(inst.valid_until);
+    if (Number.isNaN(validDate.getTime())) return 'Sem análise';
+    const compareDate = new Date(validDate.getFullYear(), validDate.getMonth(), validDate.getDate());
+    const diffDays = Math.ceil((compareDate - today) / (1000 * 60 * 60 * 24));
+    if (diffDays >= 0 && diffDays <= 15) return 'A calibrar';
+    if (diffDays > 15) return 'Em dia';
+    return 'Atrasado';
+}
+
+function getHomeLastUpdateText(inst) {
+    const hasActiveFuncionario = Boolean(
+        inst.status_obj &&
+        inst.status_obj.funcionario &&
+        !inst.status_obj.data_devolucao &&
+        inst.status_obj.tipo_status &&
+        inst.status_obj.tipo_status.startsWith('Entregue ao funcionário')
+    );
+    return hasActiveFuncionario
+        ? `Entregue para: ${inst.status_obj.funcionario}`
+        : (inst.status || '-');
+}
+
+function buildHomeCsvRows(instrumentos) {
+    const header = [
+        'Código',
+        'Info. adic.',
+        'Tipo',
+        'Instrumento controlado',
+        'Funcionário',
+        'Setor',
+        'Última atualização',
+        'Status da calibração',
+        'Pontos analisados',
+        'Última calibração',
+        'Válido até',
+        'Último certificado'
+    ];
+
+    const rows = instrumentos.map(inst => {
+        const hasActiveFuncionario = Boolean(
+            inst.status_obj &&
+            inst.status_obj.funcionario &&
+            !inst.status_obj.data_devolucao &&
+            inst.status_obj.tipo_status &&
+            inst.status_obj.tipo_status.startsWith('Entregue ao funcionário')
+        );
+        return [
+            inst.codigo || '',
+            inst.descricao || '-',
+            inst.tipo || '-',
+            inst.instrumento_controlado ? 'Sim' : 'Não',
+            hasActiveFuncionario ? (inst.status_obj.funcionario || '-') : '-',
+            hasActiveFuncionario ? (inst.status_obj.funcionario_setor || '-') : '-',
+            getHomeLastUpdateText(inst),
+            getHomeCalibrationStatusLabel(inst),
+            inst.pontos_ultima_calibracao_analisados === false ? 'Pendentes' : 'OK',
+            formatHomeDate(inst.ultima_calibracao),
+            formatHomeDate(inst.valid_until),
+            inst.ultimo_certificado || '-'
+        ];
+    });
+
+    return [header, ...rows];
+}
+
+function convertRowsToCsv(rows) {
+    return rows
+        .map(row => row.map(value => {
+            const normalized = String(value ?? '').replace(/\r?\n|\r/g, ' ').trim();
+            return `"${normalized.replace(/"/g, '""')}"`;
+        }).join(';'))
+        .join('\r\n');
+}
+
+async function fetchAllHomeInstrumentosForExport() {
+    const exportPageSize = 200;
+    let page = 1;
+    let pages = 1;
+    const items = [];
+
+    while (page <= pages) {
+        const params = new URLSearchParams();
+        params.append('page', page);
+        params.append('per_page', exportPageSize);
+        if (HOME_PMC_SCOPE) params.append('pmc_categoria', HOME_PMC_SCOPE);
+        Object.entries(currentFilters).forEach(([key, value]) => {
+            if (value !== undefined && value !== null && value !== '') {
+                params.append(key, value);
+            }
+        });
+
+        const resp = await fetch(`/instrumentos/api/status/?${params.toString()}`);
+        if (!resp.ok) {
+            throw new Error(`Falha ao carregar página ${page} para exportação.`);
+        }
+
+        const data = await resp.json();
+        items.push(...(data.instrumentos || []));
+        pages = data.pagination?.pages || 1;
+        page += 1;
+    }
+
+    return items;
+}
+
+function downloadHomeCsvFile(content) {
+    const blob = new Blob(['\ufeff', content], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const dateStamp = new Date().toISOString().slice(0, 10);
+    link.href = url;
+    link.download = `pmc-instrumentos-${dateStamp}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+function setupHomeExportButton() {
+    const exportBtn = document.getElementById('exportHomeCsvBtn');
+    if (!exportBtn || exportBtn.dataset.bound === '1') return;
+
+    exportBtn.dataset.bound = '1';
+    exportBtn.addEventListener('click', async () => {
+        exportBtn.disabled = true;
+        const originalTitle = exportBtn.title;
+        exportBtn.title = 'Exportando...';
+
+        try {
+            const instrumentos = await fetchAllHomeInstrumentosForExport();
+            const rows = buildHomeCsvRows(instrumentos);
+            const csv = convertRowsToCsv(rows);
+            downloadHomeCsvFile(csv);
+        } catch (error) {
+            console.error('Erro ao exportar CSV:', error);
+            alert('Não foi possível exportar o CSV da tabela atual.');
+        } finally {
+            exportBtn.disabled = false;
+            exportBtn.title = originalTitle;
+        }
+    });
 }
 
 async function loadHomeInstrumentos(passedFilters, pageOverride) {
@@ -376,11 +697,13 @@ async function loadHomeInstrumentos(passedFilters, pageOverride) {
             const emptyMessage = hasActiveFilters
                 ? 'Nenhum instrumento encontrado para os filtros selecionados.'
                 : 'Nenhum instrumento cadastrado.';
-            tbody.innerHTML = `<tr><td colspan="11" class="px-6 py-4 text-center text-gray-500">${emptyMessage}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="${getHomeVisibleColumnCount()}" data-home-detail-colspan="1" class="px-6 py-4 text-center text-gray-500">${emptyMessage}</td></tr>`;
             renderHomePagination();
+            applyHomeColumnVisibility();
             return;
         }
         tbody.innerHTML = instrumentos.map(buildInstrumentRow).join('');
+        applyHomeColumnVisibility();
         renderHomePagination();
     } catch (e) {
         console.error(e);
@@ -412,6 +735,7 @@ function setupHomePaginationControls() {
     if (prevBtn) {
         prevBtn.addEventListener('click', () => {
             if (homePagination && homePagination.page > 1) {
+                showHomeTableLoading();
                 loadHomeInstrumentos(undefined, homePagination.page - 1);
             }
         });
@@ -420,6 +744,7 @@ function setupHomePaginationControls() {
     if (nextBtn) {
         nextBtn.addEventListener('click', () => {
             if (homePagination && homePagination.page < homePagination.pages) {
+                showHomeTableLoading();
                 loadHomeInstrumentos(undefined, homePagination.page + 1);
             }
         });
@@ -433,30 +758,138 @@ async function populateTipoFilter() {
         const resp = await fetch('/cadastro/api/tipos_instrumento/');
         const data = await resp.json();
         const tipos = data.tipos || [];
+        const selectedValue = currentFilters.tipo_id || select.value || '';
+        select.innerHTML = '<option value="">Todos os tipos</option>';
         tipos.forEach(tipo => {
             const opt = document.createElement('option');
             opt.value = tipo.id;
             opt.textContent = tipo.descricao;
             select.appendChild(opt);
         });
+        select.value = selectedValue;
+
+        if (homeTipoChoices && typeof homeTipoChoices.destroy === 'function') {
+            homeTipoChoices.destroy();
+        }
+
+        if (typeof Choices !== 'undefined') {
+            homeTipoChoices = new Choices(select, {
+                ...DEFAULT_CHOICES_OPTIONS,
+                placeholder: true,
+                placeholderValue: 'Todos os tipos',
+                searchPlaceholderValue: 'Digite para buscar tipo',
+                itemSelectText: '',
+                allowHTML: false,
+            });
+            if (selectedValue) {
+                homeTipoChoices.setChoiceByValue(selectedValue);
+            }
+        }
     } catch (error) {
         console.error('Erro ao carregar tipos de instrumento:', error);
+    }
+}
+
+async function populateInfoAdicFilter() {
+    const select = document.getElementById('filterInfoAdic');
+    if (!select) return;
+
+    try {
+        const params = new URLSearchParams();
+        if (HOME_PMC_SCOPE) params.append('pmc_categoria', HOME_PMC_SCOPE);
+        const resp = await fetch(`/instrumentos/api/descricoes/?${params.toString()}`);
+        const data = await resp.json();
+        const descricoes = data.descricoes || [];
+        const selectedValue = currentFilters.info_adic || select.value || '';
+
+        select.innerHTML = '<option value="">Todas as descrições</option>';
+        descricoes.forEach(descricao => {
+            const opt = document.createElement('option');
+            opt.value = descricao;
+            opt.textContent = descricao;
+            select.appendChild(opt);
+        });
+        select.value = selectedValue;
+
+        if (homeInfoAdicChoices && typeof homeInfoAdicChoices.destroy === 'function') {
+            homeInfoAdicChoices.destroy();
+        }
+
+        if (typeof Choices !== 'undefined') {
+            homeInfoAdicChoices = new Choices(select, {
+                ...DEFAULT_CHOICES_OPTIONS,
+                placeholder: true,
+                placeholderValue: 'Todas as descrições',
+                searchPlaceholderValue: 'Digite para buscar descrição',
+                itemSelectText: '',
+                allowHTML: false,
+            });
+            if (selectedValue) {
+                homeInfoAdicChoices.setChoiceByValue(selectedValue);
+            }
+        }
+    } catch (error) {
+        console.error('Erro ao carregar descrições:', error);
+    }
+}
+
+async function populateSetorFilter() {
+    const select = document.getElementById('filterSetor');
+    if (!select) return;
+
+    try {
+        const resp = await fetch('/cadastro/api/setores/');
+        const data = await resp.json();
+        const setores = data.setores || [];
+        const selectedValue = currentFilters.setor || select.value || '';
+
+        select.innerHTML = '<option value="">Todos os setores</option>';
+        setores.forEach(setor => {
+            const opt = document.createElement('option');
+            opt.value = setor.nome;
+            opt.textContent = setor.nome;
+            select.appendChild(opt);
+        });
+        select.value = selectedValue;
+
+        if (homeSetorChoices && typeof homeSetorChoices.destroy === 'function') {
+            homeSetorChoices.destroy();
+        }
+
+        if (typeof Choices !== 'undefined') {
+            homeSetorChoices = new Choices(select, {
+                ...DEFAULT_CHOICES_OPTIONS,
+                placeholder: true,
+                placeholderValue: 'Todos os setores',
+                searchPlaceholderValue: 'Digite para buscar setor',
+                itemSelectText: '',
+                allowHTML: false,
+            });
+            if (selectedValue) {
+                homeSetorChoices.setChoiceByValue(selectedValue);
+            }
+        }
+    } catch (error) {
+        console.error('Erro ao carregar setores:', error);
     }
 }
 
 function getFiltersFromForm() {
     const filters = {};
     const search = document.getElementById('filterSearch');
+    const infoAdic = document.getElementById('filterInfoAdic');
     const situacao = document.getElementById('filterSituacao');
     const statusCal = document.getElementById('filterStatusCalibracao');
     const tipo = document.getElementById('filterTipo');
     const controlado = document.getElementById('filterInstrumentoControlado');
     const funcionario = document.getElementById('filterFuncionario');
+    const setor = document.getElementById('filterSetor');
     const validadeInicio = document.getElementById('filterValidadeInicio');
     const validadeFim = document.getElementById('filterValidadeFim');
     const pontosPendentes = document.getElementById('filterPontosPendentes');
 
     if (search && search.value.trim()) filters.search = search.value.trim();
+    if (infoAdic && infoAdic.value) filters.info_adic = infoAdic.value;
     if (situacao && situacao.value) filters.situacao = situacao.value;
     if (statusCal && statusCal.value) filters.status_calibracao = statusCal.value;
     if (tipo && tipo.value) filters.tipo_id = tipo.value;
@@ -464,6 +897,7 @@ function getFiltersFromForm() {
     if (validadeInicio && validadeInicio.value) filters.validade_inicio = validadeInicio.value;
     if (validadeFim && validadeFim.value) filters.validade_fim = validadeFim.value;
     if (funcionario && funcionario.value.trim()) filters.funcionario = funcionario.value.trim();
+    if (setor && setor.value.trim()) filters.setor = setor.value.trim();
     if (pontosPendentes && pontosPendentes.checked) filters.pendencias_pontos = '1';
 
     return filters;
@@ -504,9 +938,14 @@ function attachFilterHandlers() {
 }
 
 window.initHomeDashboard = async function() {
+    homeColumnVisibility = loadHomeColumnVisibility();
+    await populateInfoAdicFilter();
     await populateTipoFilter();
+    await populateSetorFilter();
     attachFilterHandlers();
     setupHomePaginationControls();
+    setupHomeColumnVisibilityControl();
+    setupHomeExportButton();
     loadIndicadoresDashboard();
     await loadHomeInstrumentos();
 }

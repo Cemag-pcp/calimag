@@ -94,6 +94,16 @@ def _apply_pmc_categoria_filter(queryset, categoria):
 
 @login_required
 @require_GET
+def instrumentos_descricoes_api(request):
+	"""Retorna descricoes distintas para o filtro de informacao adicional do PMC."""
+	qs = Instrumento.objects.filter(status='ativo').exclude(descricao__isnull=True).exclude(descricao__exact='')
+	qs = _apply_pmc_categoria_filter(qs, request.GET.get('pmc_categoria'))
+	descricoes = list(qs.order_by('descricao').values_list('descricao', flat=True).distinct())
+	return JsonResponse({'descricoes': descricoes})
+
+
+@login_required
+@require_GET
 def instrumentos_status_api(request):
 
 	qs = (
@@ -110,6 +120,10 @@ def instrumentos_status_api(request):
 	if search:
 		qs = qs.filter(Q(codigo__icontains=search) | Q(descricao__icontains=search))
 
+	info_adic_search = (request.GET.get('info_adic') or '').strip()
+	if info_adic_search:
+		qs = qs.filter(descricao__icontains=info_adic_search)
+
 	func_search = (request.GET.get('funcionario') or '').strip()
 	if func_search:
 		func_subquery = StatusInstrumento.objects.filter(
@@ -119,6 +133,8 @@ def instrumentos_status_api(request):
 			Q(funcionario__matricula__icontains=func_search)
 		)
 		qs = qs.filter(Exists(func_subquery))
+
+	setor_search = (request.GET.get('setor') or '').strip()
 
 	tipo_id = request.GET.get('tipo_id')
 	if tipo_id and tipo_id.isdigit():
@@ -166,6 +182,7 @@ def instrumentos_status_api(request):
 		status_tipo=Subquery(latest_status.values('tipo_status')[:1]),
 		status_funcionario=Subquery(latest_status.values('funcionario__nome')[:1]),
 		status_funcionario_id=Subquery(latest_status.values('funcionario_id')[:1]),
+		status_funcionario_setor=Subquery(latest_status.values('funcionario__setor__nome')[:1]),
 		status_entrega=Subquery(latest_status.values('data_entrega')[:1]),
 		status_devolucao=Subquery(latest_status.values('data_devolucao')[:1]),
 		status_recebimento=Subquery(latest_status.values('data_recebimento')[:1]),
@@ -205,6 +222,13 @@ def instrumentos_status_api(request):
 			distinct=True
 		)
 	)
+
+	if setor_search:
+		qs = qs.filter(
+			status_tipo__istartswith='Entregue ao funcion',
+			status_devolucao__isnull=True,
+			status_funcionario_setor__icontains=setor_search
+		)
 
 	situacao = (request.GET.get('situacao') or '').strip().lower()
 	if situacao:
@@ -321,6 +345,7 @@ def instrumentos_status_api(request):
 			'status_obj': {
 				'funcionario': inst.status_funcionario,
 				'funcionario_id': inst.status_funcionario_id,
+				'funcionario_setor': inst.status_funcionario_setor,
 				'data_entrega': inst.status_entrega.isoformat() if inst.status_entrega else None,
 				'data_devolucao': inst.status_devolucao.isoformat() if inst.status_devolucao else None,
 				'data_recebimento': inst.status_recebimento.isoformat() if inst.status_recebimento else None,

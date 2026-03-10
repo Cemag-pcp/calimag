@@ -178,6 +178,7 @@ window.loadFuncionarios = async function(page = 1) {
     window.funcCurrentPage = page;
     const search = document.getElementById('searchInput').value;
     try {
+        showFuncionariosTableLoading();
         const resp = await fetch(`/cadastro/api/funcionarios/lista/?page=${page}&search=${encodeURIComponent(search)}`);
         const data = await resp.json();
         renderTable(data.funcionarios);
@@ -185,6 +186,23 @@ window.loadFuncionarios = async function(page = 1) {
     } catch (e) {
         showToast('Erro ao carregar funcionários', 'error');
     }
+}
+
+function showFuncionariosTableLoading() {
+    const tbody = document.getElementById('funcionariosTable');
+    if (!tbody) return;
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="8" class="px-6 py-8 text-center">
+                <div class="flex flex-col items-center gap-3 text-gray-500">
+                    <svg class="h-6 w-6 animate-spin text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                    </svg>
+                    <span class="text-sm">Carregando funcionários...</span>
+                </div>
+            </td>
+        </tr>`;
 }
 
 function renderTable(funcionarios) {

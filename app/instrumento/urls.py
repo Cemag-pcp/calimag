@@ -15,6 +15,7 @@ urlpatterns = [
 	path('api/enviar/', views.enviar_para_calibracao, name='enviar_para_calibracao'),
 	path('api/receber/', views.receber_da_calibracao, name='receber_da_calibracao'),
 	path('api/status-ponto/', views.registrar_status_ponto, name='registrar_status_ponto'),
+	path('api/descricoes/', views.instrumentos_descricoes_api, name='instrumentos_descricoes_api'),
 	path('api/status/', views.instrumentos_status_api, name='instrumentos_status_api'),
 	path('api/indicadores/', views.indicadores_dashboard, name='indicadores_dashboard'),
 	path('api/disponiveis/', views.instrumentos_disponiveis, name='instrumentos_disponiveis'),

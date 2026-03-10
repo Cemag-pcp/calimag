@@ -32,10 +32,6 @@
         body.sidebar-collapsed #sidebar .sidebar-label {
             display: none;
         }
-        body.sidebar-collapsed #sidebar #cadastroArrow,
-        body.sidebar-collapsed #sidebar #pmcArrow {
-            display: none;
-        }
         #sidebarCollapseBtn span[data-label="collapsed"] {
             display: none;
         }
@@ -98,24 +94,14 @@
              hx-indicator="#navIndicator">
             <ul class="space-y-1 text-sm">
                 <li>
-                    <button id="pmcToggle"
-                        type="button"
-                        class="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-100 font-medium">
-                        <span class="flex items-center gap-3">
-                            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 11l8-6 8 6" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10v10h5v-5h4v5h5V10" />
-                            </svg>
-                            <span class="sidebar-label">PMC</span>
-                        </span>
-                        <svg id="pmcArrow" class="w-4 h-4 transition-transform" fill="none"
-                             stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                  d="M19 9l-7 7-7-7" />
+                    <div class="px-3 py-2 font-semibold text-gray-900 sidebar-label flex items-center gap-3">
+                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 11l8-6 8 6" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10v10h5v-5h4v5h5V10" />
                         </svg>
-                    </button>
-
-                    <ul id="pmcMenu" class="mt-2 hidden text-sm">
+                        <span>PMC</span>
+                    </div>
+                    <ul class="mt-1 text-sm">
                         <li>
                             <a href="{% url 'pmc_instrumentos' %}"
                                class="sidebar-link block px-6 py-2 hover:bg-gray-50 flex items-center gap-3">
@@ -162,26 +148,16 @@
                 </li>
 
                 <li>
-                    <button id="cadastroToggle"
-                        type="button"
-                        class="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-100 font-medium">
-                        <span class="flex items-center gap-3">
-                            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                <rect x="4" y="4" width="6" height="6" rx="1" stroke-width="2" />
-                                <rect x="14" y="4" width="6" height="6" rx="1" stroke-width="2" />
-                                <rect x="4" y="14" width="6" height="6" rx="1" stroke-width="2" />
-                                <rect x="14" y="14" width="6" height="6" rx="1" stroke-width="2" />
-                            </svg>
-                            <span class="sidebar-label">Cadastro</span>
-                        </span>
-                        <svg id="cadastroArrow" class="w-4 h-4 transition-transform" fill="none"
-                             stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                  d="M19 9l-7 7-7-7" />
+                    <div class="px-3 py-2 font-semibold text-gray-900 sidebar-label flex items-center gap-3">
+                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <rect x="4" y="4" width="6" height="6" rx="1" stroke-width="2" />
+                            <rect x="14" y="4" width="6" height="6" rx="1" stroke-width="2" />
+                            <rect x="4" y="14" width="6" height="6" rx="1" stroke-width="2" />
+                            <rect x="14" y="14" width="6" height="6" rx="1" stroke-width="2" />
                         </svg>
-                    </button>
-
-                    <ul id="cadastroMenu" class="mt-2 hidden text-sm">
+                        <span>Cadastro</span>
+                    </div>
+                    <ul class="mt-1 text-sm">
                         <li>
                             <a href="{% url 'cadastro:instrumentos_list' %}"
                                class="sidebar-link block px-6 py-2 hover:bg-gray-50 flex items-center gap-3">
@@ -253,8 +229,8 @@
     </aside>
 
     <!-- Main -->
-    <div class="flex-1 bg-gradient-to-br from-blue-50 to-indigo-100">
-        <main id="appContent" class="w-full px-6 sm:px-8 lg:px-10 py-8">
+    <div class="min-w-0 flex-1 bg-gradient-to-br from-blue-50 to-indigo-100">
+        <main id="appContent" class="min-w-0 w-full px-6 sm:px-8 lg:px-10 py-8">
             {% block content %}{% endblock %}
         </main>
     </div>
@@ -262,54 +238,19 @@
 
 <script>
 (function () {
-    const cadastroToggle = document.getElementById('cadastroToggle');
-    const cadastroMenu = document.getElementById('cadastroMenu');
-    const cadastroArrow = document.getElementById('cadastroArrow');
-    const pmcToggle = document.getElementById('pmcToggle');
-    const pmcMenu = document.getElementById('pmcMenu');
-    const pmcArrow = document.getElementById('pmcArrow');
     const links = document.querySelectorAll('.sidebar-link');
     const collapseBtn = document.getElementById('sidebarCollapseBtn');
     const hamburgerBtn = document.getElementById('sidebarHamburger');
 
-    const CADASTRO_KEY = 'calimag.sidebar.cadastro.open';
-    const PMC_KEY = 'calimag.sidebar.pmc.open';
     const ACTIVE_KEY = 'calimag.sidebar.active.href';
     const COLLAPSE_KEY = 'calimag.sidebar.collapsed';
-
-    function setMenuOpen(menu, arrow, open, storageKey) {
-        if (!menu || !arrow) return;
-        if (open) {
-            menu.classList.remove('hidden');
-            arrow.classList.add('rotate-180');
-        } else {
-            menu.classList.add('hidden');
-            arrow.classList.remove('rotate-180');
-        }
-        localStorage.setItem(storageKey, open ? '1' : '0');
-    }
 
     function setSidebarCollapsed(collapsed) {
         document.body.classList.toggle('sidebar-collapsed', collapsed);
         localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0');
     }
 
-    // Restore states
-    setMenuOpen(cadastroMenu, cadastroArrow, localStorage.getItem(CADASTRO_KEY) === '1', CADASTRO_KEY);
-    setMenuOpen(pmcMenu, pmcArrow, localStorage.getItem(PMC_KEY) === '1', PMC_KEY);
     setSidebarCollapsed(localStorage.getItem(COLLAPSE_KEY) === '1');
-
-    if (cadastroToggle) {
-        cadastroToggle.addEventListener('click', () => {
-            setMenuOpen(cadastroMenu, cadastroArrow, cadastroMenu.classList.contains('hidden'), CADASTRO_KEY);
-        });
-    }
-
-    if (pmcToggle) {
-        pmcToggle.addEventListener('click', () => {
-            setMenuOpen(pmcMenu, pmcArrow, pmcMenu.classList.contains('hidden'), PMC_KEY);
-        });
-    }
 
     function toggleSidebar() {
         const collapsed = document.body.classList.contains('sidebar-collapsed');
@@ -327,12 +268,6 @@
             const href = link.getAttribute('href').replace(/\/$/, '') || '/';
             if (href === normalizedPath) {
                 link.classList.add('bg-blue-50', 'text-blue-700', 'font-semibold');
-                if (cadastroMenu && cadastroMenu.contains(link)) {
-                    setMenuOpen(cadastroMenu, cadastroArrow, true, CADASTRO_KEY);
-                }
-                if (pmcMenu && pmcMenu.contains(link)) {
-                    setMenuOpen(pmcMenu, pmcArrow, true, PMC_KEY);
-                }
                 localStorage.setItem(ACTIVE_KEY, href);
             }
         });
