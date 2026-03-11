@@ -22,7 +22,7 @@
 <!-- Search and Filters -->
 <div class="bg-white rounded-lg shadow-md p-4 mb-6 space-y-4">
 
-    <form id="instrumentoFilterForm" class="grid gap-4 md:grid-cols-5">
+    <form id="instrumentoFilterForm" class="grid gap-4 md:grid-cols-6">
         <label class="text-sm text-gray-700">
             <span class="block text-xs text-gray-500 mb-1">Código</span>
             <input type="text" id="filterCodigo" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500" placeholder="Ex.: DBT-CQ-001">
@@ -60,6 +60,13 @@
                 <option value="false">Não</option>
             </select>
         </label>
+        <label class="text-sm text-gray-700">
+            <span class="block text-xs text-gray-500 mb-1">Disponível para entrega</span>
+            <select id="filterDisponivelEntrega" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500">
+                <option value="">Todos</option>
+                <option value="true">Somente disponíveis</option>
+            </select>
+        </label>
         <div class="md:col-span-6 flex flex-wrap justify-end gap-3">
             <button type="button" id="clearFilterBtn" class="px-4 py-2 border border-gray-300 rounded-lg text-sm">Limpar filtros</button>
             <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm">Aplicar filtros</button>
@@ -69,6 +76,18 @@
 
 <!-- Table -->
 <div class="bg-white rounded-lg shadow-md overflow-hidden">
+    <div class="flex items-center justify-end border-b border-gray-200 px-4 py-3">
+        <button
+            type="button"
+            id="exportCsvBtn"
+            onclick="exportInstrumentosCsv()"
+            class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 text-gray-600 transition hover:bg-gray-50 hover:text-gray-900"
+            title="Exportar em CSV">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16v-8m0 8 3-3m-3 3-3-3M7 20h10a2 2 0 0 0 2-2v-3M5 15v3a2 2 0 0 0 2 2"/>
+            </svg>
+        </button>
+    </div>
     <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
@@ -583,7 +602,202 @@ function buildInstrumentosQuery(page) {
         params.append('finalidade', finalidadeSelect.value);
     }
 
+    const disponivelEntregaSelect = document.getElementById('filterDisponivelEntrega');
+    if (disponivelEntregaSelect && disponivelEntregaSelect.value) {
+        params.append('disponivel_entrega', disponivelEntregaSelect.value);
+    }
+
     return params.toString();
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+async function fetchAllInstrumentosForExport() {
+    const params = new URLSearchParams(buildInstrumentosQuery(1));
+    params.set('page', '1');
+    params.set('per_page', '200');
+
+    const firstResponse = await fetch(`/cadastro/api/instrumentos/?${params.toString()}`);
+    if (!firstResponse.ok) {
+        throw new Error('Falha ao carregar instrumentos para exportaÃ§Ã£o');
+    }
+
+    const firstData = await firstResponse.json();
+    const items = [...(firstData.instrumentos || [])];
+    const totalPages = Number(firstData.pagination?.pages || 1);
+
+    for (let page = 2; page <= totalPages; page += 1) {
+        params.set('page', String(page));
+        const response = await fetch(`/cadastro/api/instrumentos/?${params.toString()}`);
+        if (!response.ok) {
+            throw new Error('Falha ao carregar todas as pÃ¡ginas para exportaÃ§Ã£o');
+        }
+        const data = await response.json();
+        items.push(...(data.instrumentos || []));
+    }
+
+    return items;
+}
+
+function csvEscape(value) {
+    const normalized = String(value ?? '').replace(/"/g, '""');
+    return `"${normalized}"`;
+}
+
+function buildInstrumentosCsv(instrumentos) {
+    const headers = ['Codigo', 'Descricao', 'Tipo', 'Finalidade', 'Controlado', 'Pontos', 'Status'];
+    const rows = instrumentos.map(inst => ([
+        inst.codigo,
+        inst.descricao || '-',
+        inst.tipo || '-',
+        inst.finalidade_display || inst.finalidade || '-',
+        inst.controlado ? 'Sim' : 'Nao',
+        inst.total_pontos ?? 0,
+        inst.status || '-',
+    ].map(csvEscape).join(';')));
+
+    return [headers.map(csvEscape).join(';'), ...rows].join('\r\n');
+}
+
+async function exportInstrumentosCsv() {
+    const button = document.getElementById('exportCsvBtn');
+    const originalContent = button ? button.innerHTML : '';
+
+    try {
+        if (button) {
+            button.disabled = true;
+            button.classList.add('opacity-60', 'cursor-not-allowed');
+        }
+
+        const instrumentos = await fetchAllInstrumentosForExport();
+        const csvContent = buildInstrumentosCsv(instrumentos);
+        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const dateStamp = new Date().toISOString().slice(0, 10);
+
+        link.href = url;
+        link.download = `instrumentos-${dateStamp}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    } catch (error) {
+        showToast(error.message || 'Erro ao exportar CSV', 'error');
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.classList.remove('opacity-60', 'cursor-not-allowed');
+            button.innerHTML = originalContent;
+        }
+    }
+}
+
+function buildInstrumentosPdfHtml(instrumentos) {
+    const generatedAt = new Date().toLocaleString('pt-BR');
+    const rows = instrumentos.map(inst => `
+        <tr>
+            <td>${escapeHtml(inst.codigo)}</td>
+            <td>${escapeHtml(inst.descricao || '-')}</td>
+            <td>${escapeHtml(inst.tipo || '-')}</td>
+            <td>${escapeHtml(inst.finalidade_display || inst.finalidade || '-')}</td>
+            <td>${inst.controlado ? 'Sim' : 'NÃ£o'}</td>
+            <td>${escapeHtml(inst.total_pontos ?? 0)}</td>
+            <td>${escapeHtml(inst.status || '-')}</td>
+        </tr>
+    `).join('');
+
+    return `
+        <!DOCTYPE html>
+        <html lang="pt-BR">
+        <head>
+            <meta charset="utf-8">
+            <title>Instrumentos - ExportaÃ§Ã£o PDF</title>
+            <style>
+                @page { size: A4 landscape; margin: 12mm; }
+                body { font-family: Arial, sans-serif; color: #111827; margin: 0; }
+                .header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 16px; }
+                .title { font-size: 20px; font-weight: 700; margin: 0; }
+                .subtitle { font-size: 12px; color: #4b5563; margin-top: 4px; }
+                .meta { font-size: 12px; color: #374151; text-align: right; }
+                table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+                th, td { border: 1px solid #d1d5db; padding: 8px; font-size: 11px; vertical-align: top; word-break: break-word; }
+                th { background: #f3f4f6; text-align: left; }
+                tbody tr:nth-child(even) { background: #f9fafb; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <div>
+                    <h1 class="title">Instrumentos de CalibraÃ§Ã£o</h1>
+                    <div class="subtitle">ExportaÃ§Ã£o da listagem com os filtros atuais</div>
+                </div>
+                <div class="meta">
+                    <div>Gerado em: ${escapeHtml(generatedAt)}</div>
+                    <div>Total: ${escapeHtml(instrumentos.length)} registro(s)</div>
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>CÃ³digo</th>
+                        <th>DescriÃ§Ã£o</th>
+                        <th>Tipo</th>
+                        <th>Finalidade</th>
+                        <th>Controlado</th>
+                        <th>Pontos</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows || '<tr><td colspan="7">Nenhum instrumento encontrado.</td></tr>'}
+                </tbody>
+            </table>
+        </body>
+        </html>
+    `;
+}
+
+async function exportInstrumentosPdf() {
+    const button = document.getElementById('exportPdfBtn');
+    const originalContent = button ? button.innerHTML : '';
+
+    try {
+        if (button) {
+            button.disabled = true;
+            button.classList.add('opacity-60', 'cursor-not-allowed');
+        }
+
+        const instrumentos = await fetchAllInstrumentosForExport();
+        const printWindow = window.open('', '_blank', 'width=1200,height=800');
+
+        if (!printWindow) {
+            throw new Error('NÃ£o foi possÃ­vel abrir a janela de exportaÃ§Ã£o');
+        }
+
+        printWindow.document.open();
+        printWindow.document.write(buildInstrumentosPdfHtml(instrumentos));
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.onload = () => {
+            printWindow.print();
+        };
+    } catch (error) {
+        showToast(error.message || 'Erro ao exportar PDF', 'error');
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.classList.remove('opacity-60', 'cursor-not-allowed');
+            button.innerHTML = originalContent;
+        }
+    }
 }
 
 function setupInstrumentoFilters() {

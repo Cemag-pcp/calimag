@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.core.paginator import Paginator
-from django.db.models import Q, OuterRef, Subquery
+from django.db.models import Q, OuterRef, Subquery, Exists
 from django.core.exceptions import ValidationError
 from .models import Instrumento, Funcionario, PontoCalibracao, TipoInstrumento, Setor
 import csv
@@ -40,6 +40,7 @@ def instrumentos_api(request):
     tipo_id = request.GET.get('tipo_id')
     controlado = request.GET.get('controlado')
     finalidade = request.GET.get('finalidade')
+    disponivel_entrega = request.GET.get('disponivel_entrega')
     try:
         page = int(request.GET.get('page', 1))
     except (TypeError, ValueError):
@@ -81,6 +82,27 @@ def instrumentos_api(request):
         finalidade_keys = {choice[0] for choice in Instrumento.FINALIDADE_CHOICES}
         if finalidade in finalidade_keys:
             instrumentos = instrumentos.filter(finalidade=finalidade)
+
+    if disponivel_entrega and disponivel_entrega.lower() in {'1', 'true', 't', 'sim'}:
+        from app.instrumento.models import FuncionarioInstrumento, StatusInstrumento
+
+        open_status = StatusInstrumento.objects.filter(
+            instrumento=OuterRef('pk'),
+            tipo_status__istartswith='Entregue ao funcionário',
+            data_devolucao__isnull=True,
+        )
+        open_posse = FuncionarioInstrumento.objects.filter(
+            instrumento=OuterRef('pk'),
+            ativo=True,
+            data_fim__isnull=True,
+        )
+        instrumentos = instrumentos.annotate(
+            has_open_status=Exists(open_status),
+            has_open_posse=Exists(open_posse),
+        ).filter(
+            has_open_status=False,
+            has_open_posse=False,
+        )
 
     instrumentos = instrumentos.order_by('-data_cadastro')
 
