@@ -450,18 +450,15 @@ def instrumento_delete(request, pk):
 @require_http_methods(["GET"])
 def funcionarios_api(request):
     """API para listar funcionários ativos"""
-    funcionarios = Funcionario.objects.filter(ativo=True).order_by('nome')
+    funcionarios = list(
+        Funcionario.objects
+        .filter(ativo=True)
+        .order_by('nome')
+        .values('id', 'matricula', 'nome', 'cargo')
+    )
     
     data = {
-        'funcionarios': [
-            {
-                'id': f.id,
-                'matricula': f.matricula,
-                'nome': f.nome,
-                'cargo': f.cargo,
-            }
-            for f in funcionarios
-        ]
+        'funcionarios': funcionarios
     }
     
     return JsonResponse(data)
