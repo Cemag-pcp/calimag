@@ -1013,6 +1013,7 @@ async function fillPontosTable(instId, container) {
                             ${needsAnalysis
                                 ? `<button class="px-2 py-1 text-sm text-blue-600 hover:underline analisarPontoBtn"
                                     data-instrumento-id="${instId}" data-ponto-id="${p.id}"
+                                    data-valor-nominal="${p.valor_nominal ?? ''}"
                                     data-valor-min="${p.valor_nominal_minimo ?? ''}" data-valor-max="${p.valor_nominal_maximo ?? ''}"
                                     data-unidade="${p.unidade || ''}" data-tolerancia-mais="${p.tolerancia_mais || ''}" data-tolerancia-menos="${p.tolerancia_menos || ''}">
                                     Analisar
@@ -1461,13 +1462,18 @@ document.addEventListener('click', function(e){
     const pontoId = btn.getAttribute('data-ponto-id');
     if (!instrumentoId) return;
     const meta = {
+        valorNominal: btn.getAttribute('data-valor-nominal') || '',
         valorMin: btn.getAttribute('data-valor-min') || '',
         valorMax: btn.getAttribute('data-valor-max') || '',
         unidade: btn.getAttribute('data-unidade') || '',
         toleranciaMais: btn.getAttribute('data-tolerancia-mais') || '',
         toleranciaMenos: btn.getAttribute('data-tolerancia-menos') || '',
     };
-    openAnalisarModalHome(pontoId, instrumentoId, meta);
+    if (HOME_PMC_SCOPE === 'maquinas_solda') {
+        openAnalisarSoldaModal(pontoId, instrumentoId, meta);
+    } else {
+        openAnalisarModalHome(pontoId, instrumentoId, meta);
+    }
 });
 </script>
 <!-- Modal Analisar Ponto (home) -->
@@ -1654,6 +1660,205 @@ document.getElementById('btnConfirmAnalisarHome').addEventListener('click', asyn
     }
 });
 </script>
+<!-- Modal Analisar Ponto - Máquina de Solda -->
+<div id="modalAnalisarSolda" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-lg bg-white">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold">Analisar Ponto — Máquina de Solda</h3>
+            <button onclick="closeAnalisarSoldaModal()" class="text-gray-400 hover:text-gray-600">✕</button>
+        </div>
+        <input type="hidden" id="soldaPontoId">
+        <input type="hidden" id="soldaInstrumentoId">
+        <div class="space-y-4">
+            <div class="grid grid-cols-1 gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700 md:grid-cols-3">
+                <div>
+                    <label class="text-xs font-semibold uppercase text-gray-500">Valor nominal</label>
+                    <input id="soldaValorNominal" type="number" step="any" placeholder="ex: 220" class="mt-1 w-full px-2 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-900" />
+                </div>
+                <div>
+                    <p class="text-xs font-semibold uppercase text-gray-500">Tolerância máxima (+)</p>
+                    <p id="soldaToleranciaMais" class="font-medium text-gray-900">-</p>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold uppercase text-gray-500">Tolerância mínima (-)</p>
+                    <p id="soldaToleranciaMenos" class="font-medium text-gray-900">-</p>
+                </div>
+            </div>
+            <p class="text-sm text-gray-500">Insira as três medições para calcular a tendência: <span class="font-medium">(M1 + M2 + M3) / 3 − Valor Nominal</span></p>
+            <div class="grid grid-cols-3 gap-3">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Medição 1</label>
+                    <input id="soldaMed1" type="number" step="any" class="w-full px-2 py-1.5 border border-gray-300 rounded-lg" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Medição 2</label>
+                    <input id="soldaMed2" type="number" step="any" class="w-full px-2 py-1.5 border border-gray-300 rounded-lg" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Medição 3</label>
+                    <input id="soldaMed3" type="number" step="any" class="w-full px-2 py-1.5 border border-gray-300 rounded-lg" />
+                </div>
+            </div>
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-3 md:items-end">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Tendência calculada</label>
+                    <input id="soldaTendenciaCalc" type="text" readonly class="w-full px-2 py-1.5 border border-gray-200 bg-gray-100 text-gray-800 rounded-lg" />
+                    <p class="mt-1 text-xs text-gray-500">= (M1 + M2 + M3) / 3 − Valor Nominal</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Incerteza</label>
+                    <input id="soldaIncerteza" type="number" step="0.0001" class="w-full px-2 py-1.5 border border-gray-300 rounded-lg" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Resultado</label>
+                    <select id="soldaResultado" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                        <option value="">-- selecione --</option>
+                        <option value="aprovado">Aprovado</option>
+                        <option value="reprovado">Reprovado</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Observações (opcional)</label>
+                <textarea id="soldaObs" class="w-full px-3 py-2 border border-gray-300 rounded-lg" rows="3"></textarea>
+            </div>
+            <div class="flex justify-end space-x-3 pt-4 border-t">
+                <button onclick="closeAnalisarSoldaModal()" class="px-4 py-2 border border-gray-300 rounded-lg">Cancelar</button>
+                <button id="btnConfirmSolda" class="px-6 py-2 bg-indigo-600 text-white rounded-lg">Salvar Análise</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+(function(){
+    var _soldaNominal = '';
+    var _isSubmitting = false;
+
+    function calcSoldaTendencia() {
+        const m1 = parseFloat(document.getElementById('soldaMed1').value);
+        const m2 = parseFloat(document.getElementById('soldaMed2').value);
+        const m3 = parseFloat(document.getElementById('soldaMed3').value);
+        const nominal = parseFloat(document.getElementById('soldaValorNominal').value);
+        const incerteza = parseFloat(document.getElementById('soldaIncerteza').value);
+        const calcEl = document.getElementById('soldaTendenciaCalc');
+        const tolEl = document.getElementById('soldaToleranciaMais');
+        const resultadoEl = document.getElementById('soldaResultado');
+        if (!Number.isFinite(m1) || !Number.isFinite(m2) || !Number.isFinite(m3)) {
+            calcEl.value = '';
+            return;
+        }
+        const media = (m1 + m2 + m3) / 3;
+        const inc = Number.isFinite(incerteza) ? incerteza : 0;
+        const tendencia = Number.isFinite(nominal) ? media + inc - nominal : media + inc;
+        calcEl.value = tendencia.toFixed(4);
+        const tol = tolEl ? parseFloat(tolEl.dataset.value) : NaN;
+        if (Number.isFinite(tol) && resultadoEl) {
+            resultadoEl.value = Math.abs(tendencia) <= tol ? 'aprovado' : 'reprovado';
+        }
+    }
+
+    ['soldaMed1', 'soldaMed2', 'soldaMed3', 'soldaValorNominal', 'soldaIncerteza'].forEach(function(id) {
+        document.getElementById(id).addEventListener('input', calcSoldaTendencia);
+    });
+
+    window.openAnalisarSoldaModal = function(pontoId, instrumentoId, meta) {
+        _soldaNominal = (meta && meta.valorNominal) ? meta.valorNominal : '';
+        document.getElementById('soldaPontoId').value = pontoId || '';
+        document.getElementById('soldaInstrumentoId').value = instrumentoId || '';
+        document.getElementById('soldaMed1').value = '';
+        document.getElementById('soldaMed2').value = '';
+        document.getElementById('soldaMed3').value = '';
+        document.getElementById('soldaTendenciaCalc').value = '';
+        document.getElementById('soldaIncerteza').value = '';
+        document.getElementById('soldaResultado').value = '';
+        document.getElementById('soldaObs').value = '';
+
+        const safeMeta = meta || {};
+        const unidade = safeMeta.unidade || '';
+        const nominalEl = document.getElementById('soldaValorNominal');
+        const tolMaisEl = document.getElementById('soldaToleranciaMais');
+        const tolMenosEl = document.getElementById('soldaToleranciaMenos');
+        if (nominalEl) nominalEl.value = _soldaNominal || '';
+        if (tolMaisEl) {
+            tolMaisEl.textContent = safeMeta.toleranciaMais ? `${safeMeta.toleranciaMais} ${unidade}`.trim() : '-';
+            tolMaisEl.dataset.value = safeMeta.toleranciaMais || '';
+        }
+        if (tolMenosEl) {
+            tolMenosEl.textContent = safeMeta.toleranciaMenos ? `${safeMeta.toleranciaMenos} ${unidade}`.trim() : '-';
+            tolMenosEl.dataset.value = safeMeta.toleranciaMenos || '';
+        }
+        document.getElementById('modalAnalisarSolda').classList.remove('hidden');
+    };
+
+    window.closeAnalisarSoldaModal = function() {
+        document.getElementById('modalAnalisarSolda').classList.add('hidden');
+    };
+
+    document.getElementById('btnConfirmSolda').addEventListener('click', async function() {
+        if (_isSubmitting) return;
+        const ponto_id = document.getElementById('soldaPontoId').value;
+        const instrumento_id = document.getElementById('soldaInstrumentoId').value;
+        const tendencia = document.getElementById('soldaTendenciaCalc').value;
+        const resultado = document.getElementById('soldaResultado').value;
+        const observacoes = document.getElementById('soldaObs').value || '';
+
+        if (!ponto_id) { alert('Ponto inválido'); return; }
+        if (!tendencia) { alert('Preencha as três medições para calcular a tendência.'); return; }
+        if (!resultado) { if (!confirm('Você tem certeza que deseja salvar sem selecionar um resultado?')) return; }
+
+        const incerteza = document.getElementById('soldaIncerteza').value || '';
+        const valorNominal = document.getElementById('soldaValorNominal').value || '';
+        const m1 = parseFloat(document.getElementById('soldaMed1').value);
+        const m2 = parseFloat(document.getElementById('soldaMed2').value);
+        const m3 = parseFloat(document.getElementById('soldaMed3').value);
+        const media = (Number.isFinite(m1) && Number.isFinite(m2) && Number.isFinite(m3))
+            ? ((m1 + m2 + m3) / 3).toFixed(4)
+            : null;
+        const payload = { ponto_id: ponto_id, tendencia: tendencia };
+        if (incerteza) payload.incerteza = incerteza;
+        if (media !== null) payload.media_medicoes = media;
+        if (resultado) payload.resultado = resultado;
+        if (observacoes) payload.observacoes = observacoes;
+
+        _isSubmitting = true;
+        const btn = document.getElementById('btnConfirmSolda');
+        btn.disabled = true;
+        btn.textContent = 'Salvando...';
+        try {
+            // salva valor nominal no cadastro do ponto, se informado
+            if (valorNominal !== '') {
+                await fetch(`/cadastro/api/pontos/${ponto_id}/update/`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRF() },
+                    body: JSON.stringify({ valor_nominal: valorNominal })
+                });
+            }
+
+            const res = await fetch('/instrumentos/api/status-ponto/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRF() },
+                body: JSON.stringify(payload)
+            });
+            const j = await res.json();
+            if (j.success) {
+                alert(j.message || 'Análise salva');
+                closeAnalisarSoldaModal();
+                if (instrumento_id) await refreshHomeInstrument(instrumento_id);
+            } else {
+                alert(j.message || 'Erro ao salvar análise');
+            }
+        } catch (err) {
+            console.error('Erro ao salvar análise:', err);
+            alert('Erro ao salvar análise');
+        } finally {
+            _isSubmitting = false;
+            btn.disabled = false;
+            btn.textContent = 'Salvar Análise';
+        }
+    });
+})();
+</script>
+
 <!-- Modal Enviar p/ Calibração (home) -->
 <div id="modalEnviarHome" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
     <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-lg bg-white">

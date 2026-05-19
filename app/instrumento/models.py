@@ -149,6 +149,7 @@ class StatusPontoCalibracao(models.Model):
         related_name='status_pontos'
     )
     incerteza = models.DecimalField('Incerteza', max_digits=6, decimal_places=4, null=True, blank=True)
+    media_medicoes = models.DecimalField('Média das Medições', max_digits=12, decimal_places=4, null=True, blank=True)
     tendencia = models.CharField('Tendência', max_length=100, blank=True)
     resultado = models.CharField('Resultado', max_length=10, choices=RESULTADO_CHOICES, null=True, blank=True)
     observacoes = models.TextField('Observações', blank=True)

@@ -1257,9 +1257,18 @@ def registrar_status_ponto(request):
 		resultado = data.get('resultado')
 		observacoes = data.get('observacoes', '')
 
+		media_medicoes = data.get('media_medicoes')
+		if media_medicoes is not None:
+			try:
+				from decimal import Decimal
+				media_medicoes = Decimal(str(media_medicoes))
+			except Exception:
+				media_medicoes = None
+
 		status_kwargs = {
 			'ponto_calibracao': ponto,
 			'incerteza': incerteza,
+			'media_medicoes': media_medicoes,
 			'tendencia': tendencia,
 			'resultado': resultado,
 			'observacoes': observacoes,

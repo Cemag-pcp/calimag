@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\pcp2\\\\qualidade\\\\calibracao_v2\" -Recurse -Directory)",
+      "Bash(python *)"
+    ]
+  }
+}
