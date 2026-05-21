@@ -260,7 +260,14 @@ def instrumentos_status_api(request):
 		elif status_calibracao == 'atrasado':
 			qs = qs.filter(valid_until__date__lt=today)
 		elif status_calibracao == 'sem_analise':
-			qs = qs.filter(valid_until__isnull=True)
+			qs = qs.filter(
+				Q(valid_until__isnull=True) |
+				Q(
+					last_recebimento_data__isnull=False,
+					total_pontos__gt=0,
+					pontos_analisados_count__lt=F('total_pontos')
+				)
+			)
 
 	pendencias_pontos = (request.GET.get('pendencias_pontos') or '').strip().lower()
 	if pendencias_pontos in {'1', 'true', 'sim', 'yes'}:
@@ -315,7 +322,9 @@ def instrumentos_status_api(request):
 			if last_recebimento else None
 		)
 
-		if valid_until and valid_until.date() >= today:
+		if last_recebimento and not pontos_ok and inst.total_pontos > 0:
+			calibration_status = 'sem_analise'
+		elif valid_until and valid_until.date() >= today:
 			days_to_expire = (valid_until.date() - today).days
 			if days_to_expire <= 15:
 				calibration_status = 'a_calibrar'

@@ -939,15 +939,17 @@ function attachFilterHandlers() {
 
 window.initHomeDashboard = async function() {
     homeColumnVisibility = loadHomeColumnVisibility();
-    await populateInfoAdicFilter();
-    await populateTipoFilter();
-    await populateSetorFilter();
     attachFilterHandlers();
     setupHomePaginationControls();
     setupHomeColumnVisibilityControl();
     setupHomeExportButton();
-    loadIndicadoresDashboard();
-    await loadHomeInstrumentos();
+    await Promise.all([
+        populateInfoAdicFilter(),
+        populateTipoFilter(),
+        populateSetorFilter(),
+        loadIndicadoresDashboard(),
+        loadHomeInstrumentos(),
+    ]);
 }
 
 async function fillPontosTable(instId, container) {
@@ -1107,10 +1109,6 @@ async function refreshHomeInstrument(instId) {
         console.error('Erro ao atualizar instrumento:', e);
     }
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-    if (typeof window.initHomeDashboard === 'function') window.initHomeDashboard();
-});
 
 // Menu toggle behavior for per-row dropdowns
 document.addEventListener('click', function(e){
