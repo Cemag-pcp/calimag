@@ -1001,7 +1001,7 @@ async function fillPontosTable(instId, container) {
                     <tr class="border-t">
                         <td class="px-3 py-2">${p.sequencia}</td>
                         <td class="px-3 py-2">${p.descricao}</td>
-                        <td class="px-3 py-2">${p.valor_nominal} ${p.unidade}</td>
+                        <td class="px-3 py-2">${p.valor_nominal_display || p.valor_nominal || '-'} ${p.unidade}</td>
                         <td class="px-3 py-2">
                             ${p.ultima_data_analise ? new Date(p.ultima_data_analise).toLocaleString() : '-'}
                         </td>
@@ -1671,7 +1671,7 @@ document.getElementById('btnConfirmAnalisarHome').addEventListener('click', asyn
             <div class="grid grid-cols-1 gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700 md:grid-cols-3">
                 <div>
                     <label class="text-xs font-semibold uppercase text-gray-500">Valor nominal</label>
-                    <input id="soldaValorNominal" type="number" step="any" placeholder="ex: 220" class="mt-1 w-full px-2 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-900" />
+                    <input id="soldaValorNominal" type="number" step="any" placeholder="ex: 220" required class="mt-1 w-full px-2 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-900" />
                 </div>
                 <div>
                     <p class="text-xs font-semibold uppercase text-gray-500">Tolerância máxima (+)</p>
@@ -1682,34 +1682,34 @@ document.getElementById('btnConfirmAnalisarHome').addEventListener('click', asyn
                     <p id="soldaToleranciaMenos" class="font-medium text-gray-900">-</p>
                 </div>
             </div>
-            <p class="text-sm text-gray-500">Insira as três medições para calcular a tendência: <span class="font-medium">(M1 + M2 + M3) / 3 − Valor Nominal</span></p>
+            <p class="text-sm text-gray-500">Insira as três medições para calcular a tendência: <span class="font-medium">((M1 + M2 + M3) / 3 + Incerteza) − Valor Nominal</span></p>
             <div class="grid grid-cols-3 gap-3">
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Medição 1</label>
-                    <input id="soldaMed1" type="number" step="any" class="w-full px-2 py-1.5 border border-gray-300 rounded-lg" />
+                    <input id="soldaMed1" type="number" step="any" required class="w-full px-2 py-1.5 border border-gray-300 rounded-lg" />
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Medição 2</label>
-                    <input id="soldaMed2" type="number" step="any" class="w-full px-2 py-1.5 border border-gray-300 rounded-lg" />
+                    <input id="soldaMed2" type="number" step="any" required class="w-full px-2 py-1.5 border border-gray-300 rounded-lg" />
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Medição 3</label>
-                    <input id="soldaMed3" type="number" step="any" class="w-full px-2 py-1.5 border border-gray-300 rounded-lg" />
+                    <input id="soldaMed3" type="number" step="any" required class="w-full px-2 py-1.5 border border-gray-300 rounded-lg" />
                 </div>
             </div>
             <div class="grid grid-cols-1 gap-3 md:grid-cols-3 md:items-end">
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Tendência calculada</label>
-                    <input id="soldaTendenciaCalc" type="text" readonly class="w-full px-2 py-1.5 border border-gray-200 bg-gray-100 text-gray-800 rounded-lg" />
-                    <p class="mt-1 text-xs text-gray-500">= (M1 + M2 + M3) / 3 − Valor Nominal</p>
+                    <input id="soldaTendenciaCalc" type="text" readonly required class="w-full px-2 py-1.5 border border-gray-200 bg-gray-100 text-gray-800 rounded-lg" />
+                    <p class="mt-1 text-xs text-gray-500">= ((M1 + M2 + M3) / 3 + Incerteza) − Valor Nominal</p>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Incerteza</label>
-                    <input id="soldaIncerteza" type="number" step="0.0001" class="w-full px-2 py-1.5 border border-gray-300 rounded-lg" />
+                    <input id="soldaIncerteza" type="number" step="0.0001" required class="w-full px-2 py-1.5 border border-gray-300 rounded-lg" />
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Resultado</label>
-                    <select id="soldaResultado" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    <select id="soldaResultado" required class="w-full px-3 py-2 border border-gray-300 rounded-lg">
                         <option value="">-- selecione --</option>
                         <option value="aprovado">Aprovado</option>
                         <option value="reprovado">Reprovado</option>
@@ -1796,13 +1796,23 @@ document.getElementById('btnConfirmAnalisarHome').addEventListener('click', asyn
         if (_isSubmitting) return;
         const ponto_id = document.getElementById('soldaPontoId').value;
         const instrumento_id = document.getElementById('soldaInstrumentoId').value;
+        const valorNominalEl = document.getElementById('soldaValorNominal');
+        const med1El = document.getElementById('soldaMed1');
+        const med2El = document.getElementById('soldaMed2');
+        const med3El = document.getElementById('soldaMed3');
+        const incertezaEl = document.getElementById('soldaIncerteza');
+        const resultadoEl = document.getElementById('soldaResultado');
         const tendencia = document.getElementById('soldaTendenciaCalc').value;
         const resultado = document.getElementById('soldaResultado').value;
         const observacoes = document.getElementById('soldaObs').value || '';
 
-        if (!ponto_id) { alert('Ponto inválido'); return; }
-        if (!tendencia) { alert('Preencha as três medições para calcular a tendência.'); return; }
-        if (!resultado) { if (!confirm('Você tem certeza que deseja salvar sem selecionar um resultado?')) return; }
+        if (!ponto_id) { alert('Ponto inv?lido'); return; }
+        const requiredFields = [valorNominalEl, med1El, med2El, med3El, incertezaEl, resultadoEl];
+        const invalidField = requiredFields.find(function(field) {
+            return !field || !field.reportValidity();
+        });
+        if (invalidField) return;
+        if (!tendencia) { alert('Preencha todos os campos obrigat?rios para calcular a tend?ncia.'); return; }
 
         const incerteza = document.getElementById('soldaIncerteza').value || '';
         const valorNominal = document.getElementById('soldaValorNominal').value || '';

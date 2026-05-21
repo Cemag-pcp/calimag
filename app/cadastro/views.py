@@ -766,7 +766,20 @@ def pontos_calibracao_api(request, instrumento_id):
                     'id': p.id,
                     'sequencia': p.sequencia,
                     'descricao': p.descricao,
-                    'valor_nominal': f"{str(p.valor_maximo)} - {str(p.valor_minimo)}",
+                    'valor_nominal': (
+                        str(p.valor_nominal)
+                        if p.valor_nominal is not None
+                        else (
+                            str((p.valor_minimo + p.valor_maximo) / 2)
+                            if p.valor_minimo is not None and p.valor_maximo is not None
+                            else ''
+                        )
+                    ),
+                    'valor_nominal_display': (
+                        f"{str(p.valor_maximo)} - {str(p.valor_minimo)}"
+                        if p.valor_minimo is not None and p.valor_maximo is not None
+                        else (str(p.valor_nominal) if p.valor_nominal is not None else '')
+                    ),
                     'valor_nominal_maximo':p.valor_maximo,
                     'valor_nominal_minimo':p.valor_minimo,
                     'unidade': p.unidade,
@@ -819,7 +832,20 @@ def pontos_calibracao_api_only_ativo(request, instrumento_id):
                     'descricao': p.descricao,
                     'valor_nominal_minimo': p.valor_minimo,
                     'valor_nominal_maximo': p.valor_maximo,
-                    'valor_nominal': f"{str(p.valor_maximo)} - {str(p.valor_minimo)}",
+                    'valor_nominal': (
+                        str(p.valor_nominal)
+                        if p.valor_nominal is not None
+                        else (
+                            str((p.valor_minimo + p.valor_maximo) / 2)
+                            if p.valor_minimo is not None and p.valor_maximo is not None
+                            else ''
+                        )
+                    ),
+                    'valor_nominal_display': (
+                        f"{str(p.valor_maximo)} - {str(p.valor_minimo)}"
+                        if p.valor_minimo is not None and p.valor_maximo is not None
+                        else (str(p.valor_nominal) if p.valor_nominal is not None else '')
+                    ),
                     'unidade': p.unidade,
                     'unidade_display': p.get_unidade_display(),
                     'tolerancia_mais': str(p.tolerancia_mais) if p.tolerancia_mais else '',
