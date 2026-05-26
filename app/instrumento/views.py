@@ -33,6 +33,11 @@ PMC_MAQUINAS_SOLDA_TIPOS = (
 PMC_GABARITO_TIPO = 'gabarito'
 
 
+def _is_pmc_maquinas_solda(categoria):
+	pmccat = (categoria or '').strip().lower()
+	return pmccat in {'maquinas_solda', 'maquinas-de-solda', 'solda'}
+
+
 def _detect_csv_delimiter(sample_line):
 	"""Infer the delimiter used in a CSV sample line."""
 	if not sample_line:
@@ -83,7 +88,7 @@ def _apply_pmc_categoria_filter(queryset, categoria):
 		maquinas_q |= Q(tipo_instrumento__descricao__iexact=tipo)
 	gabarito_q = Q(tipo_instrumento__descricao__iexact=PMC_GABARITO_TIPO)
 
-	if pmccat in {'maquinas_solda', 'maquinas-de-solda', 'solda'}:
+	if _is_pmc_maquinas_solda(pmccat):
 		return queryset.filter(maquinas_q)
 	if pmccat in {'gabaritos', 'gabarito'}:
 		return queryset.filter(gabarito_q)
@@ -105,6 +110,7 @@ def instrumentos_descricoes_api(request):
 @login_required
 @require_GET
 def instrumentos_status_api(request):
+	is_maquinas_solda = _is_pmc_maquinas_solda(request.GET.get('pmc_categoria'))
 
 	qs = (
 		Instrumento.objects
@@ -161,22 +167,25 @@ def instrumentos_status_api(request):
 	# =========================
 	latest_status = StatusInstrumento.objects.filter(
 		instrumento=OuterRef('pk')
-	).order_by('-data_entrega')
+	).order_by('-data_entrega', '-id')
 
 	last_envio = StatusInstrumento.objects.filter(
 		instrumento=OuterRef('pk'),
 		tipo_status__istartswith='Enviado ao laboratório'
-	).order_by('-data_entrega')
+	).order_by('-data_entrega', '-id')
 
 	last_recebimento = StatusInstrumento.objects.filter(
 		instrumento=OuterRef('pk'),
 		tipo_status__istartswith='Recebido do laborat',
 		data_recebimento__isnull=False
-	).order_by('-data_recebimento')
+	).order_by('-data_recebimento', '-id')
 
 	latest_cert = CertificadoCalibracao.objects.filter(
 		status__instrumento=OuterRef('pk')
 	).order_by('-data_criacao')
+	latest_analysis = StatusPontoCalibracao.objects.filter(
+		ponto_calibracao__instrumento=OuterRef('pk')
+	).order_by('-data_criacao', '-id')
 
 	qs = qs.annotate(
 		status_tipo=Subquery(latest_status.values('tipo_status')[:1]),
@@ -199,29 +208,48 @@ def instrumentos_status_api(request):
 			filter=Q(pontos_calibracao__ativo=True),
 			distinct=True
 		),
-
-		valid_until=ExpressionWrapper(
-			F('last_recebimento_data') + ExpressionWrapper(
-				F('periodicidade_calibracao') * Value(datetime.timedelta(days=1)),
-				output_field=DurationField()
-			),
-			output_field=DateTimeField()
-		),
+		ultima_analise_data=Subquery(latest_analysis.values('data_criacao')[:1]),
 	)
 
 	fallback_date = timezone.make_aware(datetime.datetime(1900, 1, 1))
-	qs = qs.annotate(
-		pontos_analisados_count=Count(
-			'pontos_calibracao__status_pontos',
-			filter=Q(
-				pontos_calibracao__status_pontos__data_criacao__gte=Coalesce(
-					F('last_envio_data'),
-					Value(fallback_date)
-				)
+	if is_maquinas_solda:
+		qs = qs.annotate(
+			pontos_analisados_count=Count(
+				'pontos_calibracao',
+				filter=Q(
+					pontos_calibracao__ativo=True,
+					pontos_calibracao__status_pontos__isnull=False,
+				),
+				distinct=True
 			),
-			distinct=True
+			valid_until=ExpressionWrapper(
+				F('ultima_analise_data') + ExpressionWrapper(
+					F('periodicidade_calibracao') * Value(datetime.timedelta(days=1)),
+					output_field=DurationField()
+				),
+				output_field=DateTimeField()
+			),
 		)
-	)
+	else:
+		qs = qs.annotate(
+			pontos_analisados_count=Count(
+				'pontos_calibracao__status_pontos',
+				filter=Q(
+					pontos_calibracao__status_pontos__data_criacao__gte=Coalesce(
+						F('last_envio_data'),
+						Value(fallback_date)
+					)
+				),
+				distinct=True
+			),
+			valid_until=ExpressionWrapper(
+				F('last_recebimento_data') + ExpressionWrapper(
+					F('periodicidade_calibracao') * Value(datetime.timedelta(days=1)),
+					output_field=DurationField()
+				),
+				output_field=DateTimeField()
+			),
+		)
 
 	if setor_search:
 		qs = qs.filter(
@@ -260,14 +288,23 @@ def instrumentos_status_api(request):
 		elif status_calibracao == 'atrasado':
 			qs = qs.filter(valid_until__date__lt=today)
 		elif status_calibracao == 'sem_analise':
-			qs = qs.filter(
-				Q(valid_until__isnull=True) |
-				Q(
-					last_recebimento_data__isnull=False,
-					total_pontos__gt=0,
-					pontos_analisados_count__lt=F('total_pontos')
+			if is_maquinas_solda:
+				qs = qs.filter(
+					Q(valid_until__isnull=True) |
+					Q(
+						total_pontos__gt=0,
+						pontos_analisados_count__lt=F('total_pontos')
+					)
 				)
-			)
+			else:
+				qs = qs.filter(
+					Q(valid_until__isnull=True) |
+					Q(
+						last_recebimento_data__isnull=False,
+						total_pontos__gt=0,
+						pontos_analisados_count__lt=F('total_pontos')
+					)
+				)
 
 	pendencias_pontos = (request.GET.get('pendencias_pontos') or '').strip().lower()
 	if pendencias_pontos in {'1', 'true', 'sim', 'yes'}:
@@ -316,7 +353,7 @@ def instrumentos_status_api(request):
 		if not pontos_ok:
 			pending_analysis_count += 1
 
-		last_recebimento = inst.last_recebimento_data
+		last_recebimento = inst.ultima_analise_data if is_maquinas_solda else inst.last_recebimento_data
 		valid_until = (
 			last_recebimento + timedelta(days=inst.periodicidade_calibracao)
 			if last_recebimento else None
@@ -385,6 +422,7 @@ def indicadores_dashboard(request):
 	"""Retorna agregados para cards de indicadores da home.
 	Apenas instrumentos com instrumento_controlado=True entram nos cálculos.
 	"""
+	is_maquinas_solda = _is_pmc_maquinas_solda(request.GET.get('pmc_categoria'))
 
 	# ===== INSTRUMENTOS ATIVOS E CONTROLADOS =====
 	active_instrumentos = Instrumento.objects.filter(
@@ -398,18 +436,21 @@ def indicadores_dashboard(request):
 
 	latest_status_qs = StatusInstrumento.objects.filter(
 		instrumento=OuterRef('pk')
-	).order_by('-data_entrega')
+	).order_by('-data_entrega', '-id')
 
 	last_envio_qs = StatusInstrumento.objects.filter(
 		instrumento=OuterRef('pk'),
 		tipo_status__istartswith='Enviado ao laboratório'
-	).order_by('-data_entrega')
+	).order_by('-data_entrega', '-id')
 
 	last_recebimento_qs = StatusInstrumento.objects.filter(
 		instrumento=OuterRef('pk'),
 		tipo_status__istartswith='Recebido do laborat',
 		data_recebimento__isnull=False
-	).order_by('-data_recebimento')
+	).order_by('-data_recebimento', '-id')
+	ultima_analise_qs = StatusPontoCalibracao.objects.filter(
+		ponto_calibracao__instrumento=OuterRef('pk')
+	).order_by('-data_criacao', '-id')
 
 
 	instrumentos_data = list(
@@ -418,12 +459,14 @@ def indicadores_dashboard(request):
 			ultimo_status_devolucao=Subquery(latest_status_qs.values('data_devolucao')[:1]),
 			ultimo_status_recebimento=Subquery(last_recebimento_qs.values('data_recebimento')[:1]),
 			ultimo_envio_data=Subquery(last_envio_qs.values('data_entrega')[:1]),
+			ultima_analise_data=Subquery(ultima_analise_qs.values('data_criacao')[:1]),
 		).values(
 			'id',
 			'ultimo_status_tipo',
 			'ultimo_status_devolucao',
 			'ultimo_status_recebimento',
 			'ultimo_envio_data',
+			'ultima_analise_data',
 			'periodicidade_calibracao'
 		)
 	)
@@ -443,18 +486,19 @@ def indicadores_dashboard(request):
 		if tipo_status.startswith('entregue ao funcionário') and data_devolucao is None:
 			instrumentos_operacao += 1
 
-		if tipo_status.startswith('enviado ao laboratório') and data_recebimento is None:
+		if not is_maquinas_solda and tipo_status.startswith('enviado ao laboratório') and data_recebimento is None:
 			instrumentos_calibracao += 1
 
 		instrumento_envio_map[inst['id']] = inst.get('ultimo_envio_data')
-		if data_recebimento:
+		base_calibracao = inst.get('ultima_analise_data') if is_maquinas_solda else data_recebimento
+		if base_calibracao:
 			periodicidade = inst.get('periodicidade_calibracao') or 0
-			valid_until = (data_recebimento + timedelta(days=periodicidade)).date()
+			valid_until = (base_calibracao + timedelta(days=periodicidade)).date()
 			if valid_until < today:
 				instrumentos_atraso += 1
 
 	# ===== PONTOS DE CALIBRAÇÃO (APENAS DE INSTRUMENTOS CONTROLADOS) =====
-	ultima_analise_qs = StatusPontoCalibracao.objects.filter(
+	ultima_analise_ponto_qs = StatusPontoCalibracao.objects.filter(
 		ponto_calibracao=OuterRef('pk')
 	).order_by('-data_criacao')
 
@@ -464,7 +508,7 @@ def indicadores_dashboard(request):
 		instrumento__instrumento_controlado=True,
 		instrumento_id__in=active_instrumentos.values('id')
 	).annotate(
-		ultima_analise_data=Subquery(ultima_analise_qs.values('data_criacao')[:1])
+		ultima_analise_data=Subquery(ultima_analise_ponto_qs.values('data_criacao')[:1])
 	).values('instrumento_id', 'ultima_analise_data')
 
 	pendentes_pontos = 0
@@ -472,7 +516,10 @@ def indicadores_dashboard(request):
 		last_envio = instrumento_envio_map.get(ponto['instrumento_id'])
 		last_analysis = ponto.get('ultima_analise_data')
 
-		if last_envio:
+		if is_maquinas_solda:
+			if last_analysis is None:
+				pendentes_pontos += 1
+		elif last_envio:
 			if not (last_analysis and last_analysis >= last_envio):
 				pendentes_pontos += 1
 		else:
@@ -499,6 +546,12 @@ def instrumentos_disponiveis(request):
 		data_devolucao__isnull=True
 	)
 
+	at_lab_status = StatusInstrumento.objects.filter(
+		instrumento=OuterRef('pk'),
+		tipo_status__istartswith='Enviado ao laboratório',
+		data_recebimento__isnull=True
+	)
+
 	open_posse = FuncionarioInstrumento.objects.filter(
 		instrumento=OuterRef('pk'),
 		ativo=True,
@@ -510,9 +563,10 @@ def instrumentos_disponiveis(request):
 		.filter(status='ativo')
 		.annotate(
 			has_open_status=Exists(open_status),
+			has_at_lab=Exists(at_lab_status),
 			has_open_posse=Exists(open_posse)
 		)
-		.filter(has_open_status=False, has_open_posse=False)
+		.filter(has_open_status=False, has_at_lab=False, has_open_posse=False)
 	)
 
 	if search:
@@ -599,6 +653,7 @@ def ultimo_responsavel_pre_envio(request, instrumento_id):
 		return JsonResponse({'success': True, 'responsavel': None})
 
 	resp_data = {
+		'posse_id': posse.id,
 		'funcionario_id': posse.funcionario.id,
 		'funcionario_nome': posse.funcionario.nome,
 		'funcionario_matricula': posse.funcionario.matricula,
@@ -920,7 +975,25 @@ def designar_instrumento(request):
 				assinatura.imagem.save(filename, ContentFile(file_data))
 				assinatura.save()
 			except Exception:
-				# não bloquear criação da posse por falha na assinatura
+				pass
+
+		# opcional: copiar assinatura de uma posse anterior
+		copy_from_posse_id = data.get('copy_assinatura_from_posse_id')
+		if copy_from_posse_id and not assinatura_b64:
+			try:
+				old_assinatura = AssinaturaFuncionarioInstrumento.objects.filter(
+					posse_id=copy_from_posse_id
+				).order_by('-data_assinatura').first()
+				if old_assinatura:
+					old_assinatura.imagem.open('rb')
+					file_data = old_assinatura.imagem.read()
+					old_assinatura.imagem.close()
+					ext = old_assinatura.imagem.name.rsplit('.', 1)[-1] if '.' in old_assinatura.imagem.name else 'png'
+					filename = f'assinatura_posse_{posse.id}.{ext}'
+					nova_assinatura = AssinaturaFuncionarioInstrumento(posse=posse)
+					nova_assinatura.imagem.save(filename, ContentFile(file_data))
+					nova_assinatura.save()
+			except Exception:
 				pass
 
 		return JsonResponse({'success': True, 'message': 'Instrumento designado com sucesso', 'posse_id': posse.id})

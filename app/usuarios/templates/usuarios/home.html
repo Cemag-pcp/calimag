@@ -491,6 +491,144 @@ function buildInstrumentRow(inst) {
     `;
 }
 
+buildInstrumentRow = function(inst) {
+    const isSoldaView = HOME_PMC_SCOPE === 'maquinas_solda';
+    const isSent = inst.status_obj && isSentToLaboratorio(inst.status_obj.tipo_status) && !inst.status_obj.data_devolucao;
+    const isReceivable = inst.status_obj && isSentToLaboratorio(inst.status_obj.tipo_status) && !inst.status_obj.data_recebimento;
+    const isAnalyzable = isSoldaView || (inst.status_obj && ((inst.status_obj.tipo_status && inst.status_obj.tipo_status.startsWith('Recebido')) || Boolean(inst.status_obj.data_recebimento)));
+    const hasActiveFuncionario = Boolean(
+        inst.status_obj &&
+        inst.status_obj.funcionario &&
+        !inst.status_obj.data_devolucao &&
+        inst.status_obj.tipo_status &&
+        inst.status_obj.tipo_status.startsWith('Entregue ao funcionÃ¡rio')
+    );
+    const jaFoiEnviado = Boolean(inst.has_status_pontos || inst.data_ultimo_envio);
+    const primeiroEnvio = !jaFoiEnviado;
+    const semPendencias = inst.pontos_ultima_calibracao_analisados === true;
+    const podeMostrarEnviar =
+        !isSent &&
+        (
+            primeiroEnvio ||
+            (jaFoiEnviado && semPendencias)
+        );
+    const enviarDisabled = !podeMostrarEnviar;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const statusKey = inst.calibration_status || null;
+    let statusBadge = { text: 'Sem anÃ¡lise', cls: 'bg-gray-100 text-gray-700' };
+    if (statusKey === 'em_dia') {
+        statusBadge = { text: 'Em dia', cls: 'bg-emerald-100 text-emerald-800' };
+    } else if (statusKey === 'a_calibrar') {
+        statusBadge = { text: 'A calibrar', cls: 'bg-amber-100 text-amber-800' };
+    } else if (statusKey === 'atrasado') {
+        statusBadge = { text: 'Atrasado', cls: 'bg-red-100 text-red-800' };
+    } else if (statusKey === 'sem_analise') {
+        statusBadge = { text: 'Sem anÃ¡lise', cls: 'bg-gray-100 text-gray-700' };
+    } else if (inst.valid_until) {
+        const validDate = new Date(inst.valid_until);
+        if (!Number.isNaN(validDate.getTime())) {
+            const compareDate = new Date(validDate.getFullYear(), validDate.getMonth(), validDate.getDate());
+            const diffDays = Math.ceil((compareDate - today) / (1000 * 60 * 60 * 24));
+            if (diffDays >= 0 && diffDays <= 15) {
+                statusBadge = { text: 'A calibrar', cls: 'bg-amber-100 text-amber-800' };
+            } else if (diffDays > 15) {
+                statusBadge = { text: 'Em dia', cls: 'bg-emerald-100 text-emerald-800' };
+            } else {
+                statusBadge = { text: 'Atrasado', cls: 'bg-red-100 text-red-800' };
+            }
+        }
+    }
+
+    const hasPendingPoints = inst.pontos_ultima_calibracao_analisados === false;
+    const pontosBadge = hasPendingPoints
+        ? { text: 'Pendentes', cls: 'bg-amber-100 text-amber-800' }
+        : { text: 'OK', cls: 'bg-gray-100 text-gray-700' };
+    const controlBadge = inst.instrumento_controlado
+        ? { text: 'Sim', cls: 'bg-indigo-100 text-indigo-800' }
+        : { text: 'NÃ£o', cls: 'bg-gray-100 text-gray-700' };
+
+    const rawUpdateText = hasActiveFuncionario
+        ? `Entregue para: ${inst.status_obj.funcionario}`
+        : (inst.status || '-');
+    const formattedUpdateText = emphasizeStatusPrefix(rawUpdateText);
+    const funcionarioSetor = hasActiveFuncionario ? (inst.status_obj.funcionario_setor || '-') : '-';
+    const soldaActions = `
+                    <button type="button" onclick="openInstrumentAnalysis(${inst.id})" class="inline-flex items-center justify-center rounded-md border border-gray-300 shadow-sm px-2 py-1 bg-white text-sm text-blue-600 hover:bg-gray-50">
+                        Analisar instrumento
+                    </button>
+                    <button type="button" class="inline-flex items-center justify-center rounded-md border border-gray-300 shadow-sm px-2 py-1 bg-white text-sm text-gray-700 hover:bg-gray-50" data-action="historico" data-instrumento-id="${inst.id}">
+                        HistÃ³rico
+                    </button>
+    `;
+    const defaultActions = `
+                    <button onclick="togglePontos(${inst.id})" class="inline-flex items-center justify-center rounded-md border border-gray-300 shadow-sm px-2 py-1 bg-white text-sm text-blue-600 hover:bg-gray-50">
+                        Faixas de calibração
+                    </button>
+                    <div class="relative inline-block text-left">
+                        <button type="button" class="inline-flex items-center justify-center rounded-md border border-gray-300 shadow-sm px-2 py-1 bg-white text-sm text-gray-700 hover:bg-gray-50" aria-expanded="false" aria-haspopup="true" data-menu-toggle="${inst.id}" aria-label="Abrir menu">
+                            <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </button>
+
+                        <div id="menu-${inst.id}" class="w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 hidden z-50" data-floating-menu>
+                            <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
+                                <button
+                                    ${enviarDisabled ? 'disabled aria-disabled="true"' : ''}
+                                    class="w-full text-left px-4 py-2 text-sm ${
+                                        enviarDisabled
+                                            ? 'text-gray-400 cursor-not-allowed'
+                                            : 'text-gray-700 hover:bg-gray-100'
+                                    }"
+                                    data-action="enviar">Enviar p/ calibração
+                                </button>
+                                <button ${isReceivable ? '' : 'disabled'} class="${isReceivable ? 'w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100' : 'w-full text-left px-4 py-2 text-sm text-gray-400 cursor-not-allowed'}" data-action="receber">Receber da calibração</button>
+                                <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-action="historico">Ver histórico</button>
+                            </div>
+                        </div>
+                    </div>
+    `;
+
+    return `
+        <tr class="hover:bg-gray-50" id="inst-row-${inst.id}">
+            <td data-col="codigo" class="px-6 py-4">${inst.codigo}</td>
+            <td data-col="info_adic" class="px-6 py-4">${inst.descricao || '-'}</td>
+            <td data-col="tipo" class="px-6 py-4">${inst.tipo || '-'}</td>
+            <td data-col="controlado" class="px-6 py-4">
+                <span class="px-2 py-1 text-xs font-semibold rounded-full ${controlBadge.cls}">${controlBadge.text}</span>
+            </td>
+            <td data-col="funcionario" class="px-6 py-4">${hasActiveFuncionario ? inst.status_obj.funcionario : '-'}</td>
+            <td data-col="setor" class="px-6 py-4">${funcionarioSetor}</td>
+            <td data-col="ultima_atualizacao" class="px-6 py-4">
+                ${formattedUpdateText}
+            </td>
+            <td data-col="status_calibracao" class="px-6 py-4">
+                <span class="px-2 py-1 text-xs font-semibold rounded-full ${statusBadge.cls}">${statusBadge.text}</span>
+            </td>
+            <td data-col="pontos_analisados" class="px-6 py-4">
+                <span class="px-2 py-1 text-xs font-semibold rounded-full ${pontosBadge.cls}">${pontosBadge.text}</span>
+            </td>
+            <td data-col="ultima_calibracao" class="px-6 py-4">${inst.ultima_calibracao ? new Date(inst.ultima_calibracao).toLocaleDateString() : '-'}</td>
+            <td data-col="valido_ate" class="px-6 py-4">${inst.valid_until ? new Date(inst.valid_until).toLocaleDateString() : '-'}</td>
+            <td data-col="ultimo_certificado" class="px-6 py-4">
+                ${inst.ultimo_certificado
+                    ? `<a class="text-indigo-600 hover:text-indigo-800 underline" href="${inst.ultimo_certificado}" target="_blank" rel="noopener noreferrer">Abrir certificado</a>`
+                    : '-'}
+            </td>
+            <td data-col="acoes" class="px-6 py-4 text-right">
+                <div class="inline-flex items-center gap-2">
+                    ${isSoldaView ? soldaActions : defaultActions}
+                </div>
+            </td>
+        </tr>
+        <tr id="inst-pontos-${inst.id}" class="hidden">
+            <td colspan="${getHomeVisibleColumnCount()}" data-home-detail-colspan="1" class="px-6 py-4 bg-gray-50" id="inst-pontos-container-${inst.id}" data-analyzable="${isAnalyzable ? '1' : '0'}" data-last-envio="${isSoldaView ? '' : (inst.data_ultimo_envio || '')}"></td>
+        </tr>
+    `;
+}
+
 function showHomeTableLoading() {
     const tbody = document.getElementById('homeInstrumentosTable');
     if (!tbody) return;
@@ -961,6 +1099,7 @@ async function fillPontosTable(instId, container) {
             return;
         }
         const analyzable = container.dataset.analyzable === '1';
+        const isSoldaView = HOME_PMC_SCOPE === 'maquinas_solda';
         const lastEnvioISO = container.dataset.lastEnvio;
         const lastEnvioDateRaw = lastEnvioISO ? new Date(lastEnvioISO) : null;
         const lastEnvioValid = lastEnvioDateRaw && !Number.isNaN(lastEnvioDateRaw.getTime());
@@ -983,8 +1122,9 @@ async function fillPontosTable(instId, container) {
                     const ultimaAnaliseDateRaw = p.ultima_data_analise ? new Date(p.ultima_data_analise) : null;
                     const ultimaAnaliseValid = ultimaAnaliseDateRaw && !Number.isNaN(ultimaAnaliseDateRaw.getTime());
                     const needsAnalysis = analyzable && (
-                        !ultimaAnaliseValid ||
-                        (lastEnvioValid && ultimaAnaliseDateRaw < lastEnvioDateRaw)
+                        isSoldaView
+                            ? !ultimaAnaliseValid
+                            : (!ultimaAnaliseValid || (lastEnvioValid && ultimaAnaliseDateRaw < lastEnvioDateRaw))
                     );
                     const resultadoBadge = (() => {
                         if (!p.ultima_resultado) return '-';
@@ -1111,66 +1251,84 @@ async function refreshHomeInstrument(instId) {
 }
 
 // Menu toggle behavior for per-row dropdowns
-document.addEventListener('click', function(e){
-    const toggle = e.target.closest('[data-menu-toggle]');
-    if (toggle){
-        const id = toggle.getAttribute('data-menu-toggle');
-        const menu = document.getElementById(`menu-${id}`);
-        if (!menu) return;
+if (!window.__homeFloatingMenuBound) {
+    window.__homeFloatingMenuBound = true;
 
-        document.querySelectorAll('[id^="menu-"]').forEach(m => {
-            if (m.id !== `menu-${id}`) m.classList.add('hidden');
-        });
+    document.addEventListener('click', function(e){
+        const toggle = e.target.closest('[data-menu-toggle]');
+        if (toggle){
+            const id = toggle.getAttribute('data-menu-toggle');
+            const menu = document.getElementById(`menu-${id}`);
+            if (!menu) return;
 
-        const rect = toggle.getBoundingClientRect();
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
+            document.querySelectorAll('[id^="menu-"]').forEach(m => {
+                if (m.id !== `menu-${id}`) m.classList.add('hidden');
+            });
 
-        const wasHidden = menu.classList.contains('hidden');
-        if (wasHidden) menu.classList.remove('hidden');
-        menu.style.visibility = 'hidden';
-        menu.style.position = 'fixed';
-        menu.style.zIndex = '1000';
+            const rect = toggle.getBoundingClientRect();
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
 
-        const menuWidth = menu.offsetWidth || 224;
-        const menuHeight = menu.offsetHeight || 240;
+            const wasHidden = menu.classList.contains('hidden');
+            if (wasHidden) menu.classList.remove('hidden');
+            menu.style.visibility = 'hidden';
+            menu.style.position = 'fixed';
+            menu.style.zIndex = '1000';
 
-        let left = rect.left;
-        if (left + menuWidth > viewportWidth) left = Math.max(8, viewportWidth - menuWidth - 8);
-        if (left < 8) left = 8;
+            const menuWidth = menu.offsetWidth || 224;
+            const menuHeight = menu.offsetHeight || 240;
 
-        let top = rect.bottom + 6;
-        const bottomOverflow = top + menuHeight > viewportHeight;
-        if (bottomOverflow) {
-            top = rect.top - menuHeight - 6;
-        }
-        if (top < 8) top = 8;
+            let left = rect.left;
+            if (left + menuWidth > viewportWidth) left = Math.max(8, viewportWidth - menuWidth - 8);
+            if (left < 8) left = 8;
 
-        menu.style.left = `${left}px`;
-        menu.style.top = `${top}px`;
-        menu.style.maxHeight = `${Math.max(120, viewportHeight - 16)}px`;
-        menu.style.overflowY = 'auto';
-        menu.style.visibility = '';
+            let top = rect.bottom + 6;
+            const bottomOverflow = top + menuHeight > viewportHeight;
+            if (bottomOverflow) {
+                top = rect.top - menuHeight - 6;
+            }
+            if (top < 8) top = 8;
 
-        if (!wasHidden) {
-            menu.classList.add('hidden');
+            menu.style.left = `${left}px`;
+            menu.style.top = `${top}px`;
+            menu.style.maxHeight = `${Math.max(120, viewportHeight - 16)}px`;
+            menu.style.overflowY = 'auto';
             menu.style.visibility = '';
-            menu.style.overflowY = '';
-            menu.style.maxHeight = '';
+
+            if (!wasHidden) {
+                menu.classList.add('hidden');
+                menu.style.visibility = '';
+                menu.style.overflowY = '';
+                menu.style.maxHeight = '';
+            }
+
+            return;
         }
 
+        if (e.target.closest('[data-floating-menu] button')){
+            document.querySelectorAll('[id^="menu-"]').forEach(m => m.classList.add('hidden'));
+            return;
+        }
+
+        if (!e.target.closest('[data-floating-menu]')){
+            document.querySelectorAll('[id^="menu-"]').forEach(m => m.classList.add('hidden'));
+        }
+    });
+}
+
+async function openInstrumentAnalysis(instId) {
+    const row = document.getElementById(`inst-pontos-${instId}`);
+    if (!row || row.classList.contains('hidden')) {
+        await togglePontos(instId);
         return;
     }
-
-    if (e.target.closest('[data-floating-menu] button')){
-        document.querySelectorAll('[id^="menu-"]').forEach(m => m.classList.add('hidden'));
-        return;
+    const container = document.getElementById(`inst-pontos-container-${instId}`);
+    if (!container) return;
+    if (!container.innerHTML.trim()) {
+        container.innerHTML = '<div class="text-sm text-gray-500">Carregando pontos...</div>';
+        await fillPontosTable(instId, container);
     }
-
-    if (!e.target.closest('[data-floating-menu]')){
-        document.querySelectorAll('[id^="menu-"]').forEach(m => m.classList.add('hidden'));
-    }
-});
+}
 
 // handler for the 'Analisar' quick button
 document.addEventListener('click', function(e){
@@ -1218,7 +1376,6 @@ document.addEventListener('click', function(e){
     </div>
 </div>
 
-<!-- Modal Reentrega Prompt (home)
 <div id="modalReentregaPrompt" class="hidden fixed inset-0 bg-gray-700 bg-opacity-50 overflow-y-auto h-full w-full z-50">
     <div class="relative top-24 mx-auto w-full max-w-xl rounded-lg bg-white p-6 shadow-xl">
         <div class="flex items-start justify-between gap-4">
@@ -1234,7 +1391,7 @@ document.addEventListener('click', function(e){
             <button id="btnReentregaConfirm" class="px-4 py-2 text-sm text-white transition bg-indigo-600 rounded-lg hover:bg-indigo-700">Sim, reatribuir</button>
         </div>
     </div>
-</div> -->
+</div>
 
 <script>
 var pendingReceberPayload = null;
@@ -1316,33 +1473,34 @@ function buildReentregaMessage(info){
     const message = document.getElementById('reentregaPromptMessage');
     if (!message) return;
     const funcionarioNome = info.funcionario_nome || 'o colaborador anterior';
+    const matricula = info.funcionario_matricula ? ` (${info.funcionario_matricula})` : '';
     const codigo = info.instrumento_codigo || '';
     const descricao = info.instrumento_descricao || '';
     const instrumentoLabel = codigo ? `${codigo}${descricao ? ' - ' + descricao : ''}` : 'o instrumento';
     message.innerHTML = '';
     const prefix = document.createElement('span');
-    prefix.textContent = `Atenção! O último usuário antes de enviar ${instrumentoLabel} ao laboratório era `;
+    prefix.textContent = `O último responsável por ${instrumentoLabel} antes do envio ao laboratório era `;
     const destaque = document.createElement('span');
     destaque.className = 'font-semibold text-indigo-600';
-    destaque.textContent = funcionarioNome;
+    destaque.textContent = funcionarioNome + matricula;
     const suffix = document.createElement('span');
-    suffix.textContent = '. Você deseja reatribuir para ele?';
+    suffix.textContent = '. Deseja reatribuir para ele?';
     message.append(prefix, destaque, suffix);
 }
 
-// function openReentregaPrompt(info){
-//     buildReentregaMessage(info);
-//     const modal = document.getElementById('modalReentregaPrompt');
-//     if (modal) modal.classList.remove('hidden');
-// }
+function openReentregaPrompt(info){
+    buildReentregaMessage(info);
+    const modal = document.getElementById('modalReentregaPrompt');
+    if (modal) modal.classList.remove('hidden');
+}
 
-// function closeReentregaPrompt(resetState = false){
-//     const modal = document.getElementById('modalReentregaPrompt');
-//     if (modal) modal.classList.add('hidden');
-//     if (resetState) {
-//         resetReceberState();
-//     }
-// }
+function closeReentregaPrompt(resetState = false){
+    const modal = document.getElementById('modalReentregaPrompt');
+    if (modal) modal.classList.add('hidden');
+    if (resetState) {
+        resetReceberState();
+    }
+}
 
 function redirectToEntregasWithPrefill(info){
     if (!info) return;
@@ -1364,7 +1522,7 @@ function redirectToEntregasWithPrefill(info){
 
 async function submitReceber(payload, options = {}){
     if (!payload || isSubmittingReceber) return;
-    const { shouldRedirect = false } = options;
+    const { skipRefresh = false } = options;
     isSubmittingReceber = true;
     setReceberButtonLoading(true);
     try {
@@ -1376,12 +1534,10 @@ async function submitReceber(payload, options = {}){
         const j = await res.json();
         if (j.success) {
             closeReceberModalHome();
-            if (shouldRedirect && pendingReentregaInfo) {
-                redirectToEntregasWithPrefill(pendingReentregaInfo);
-                return;
+            if (!skipRefresh) {
+                alert(j.message || 'Recebido');
+                await loadHomeInstrumentos();
             }
-            alert(j.message || 'Recebido');
-            await loadHomeInstrumentos();
         } else {
             alert(j.message || 'Erro ao receber');
         }
@@ -1408,48 +1564,69 @@ document.addEventListener('click', function(e){
     openReceberModalHome(instId);
 });
 
-const confirmarReceberBtn = document.getElementById('btnConfirmReceberHome');
-if (confirmarReceberBtn) {
-    confirmarReceberBtn.addEventListener('click', async () => {
-        const payload = buildReceberPayload();
-        if (!payload) return;
-        pendingReceberPayload = payload;
-        // const info = await fetchUltimoResponsavel(payload.instrumento_id);
-        // if (info && info.funcionario_id) {
-        //     pendingReentregaInfo = info;
-        //     openReentregaPrompt(info);
-        //     return;
-        // }
-        await submitReceber(payload);
+{
+    const confirmarReceberBtn = document.getElementById('btnConfirmReceberHome');
+    if (confirmarReceberBtn && confirmarReceberBtn.dataset.bound !== '1') {
+        confirmarReceberBtn.dataset.bound = '1';
+        confirmarReceberBtn.addEventListener('click', async () => {
+            const payload = buildReceberPayload();
+            if (!payload) return;
+            pendingReceberPayload = payload;
+            const info = await fetchUltimoResponsavel(payload.instrumento_id);
+            if (info && info.funcionario_id) {
+                pendingReentregaInfo = info;
+                openReentregaPrompt(info);
+                return;
+            }
+            await submitReceber(payload);
+        });
+    }
+}
+
+const reentregaSkipBtn = document.getElementById('btnReentregaSkip');
+if (reentregaSkipBtn) {
+    reentregaSkipBtn.addEventListener('click', async () => {
+        closeReentregaPrompt();
+        if (pendingReceberPayload) {
+            await submitReceber(pendingReceberPayload);
+        }
     });
 }
 
-// const reentregaSkipBtn = document.getElementById('btnReentregaSkip');
-// if (reentregaSkipBtn) {
-//     reentregaSkipBtn.addEventListener('click', async () => {
-//         closeReentregaPrompt();
-//         if (pendingReceberPayload) {
-//             await submitReceber(pendingReceberPayload);
-//         }
-//     });
-// }
+const reentregaConfirmBtn = document.getElementById('btnReentregaConfirm');
+if (reentregaConfirmBtn) {
+    reentregaConfirmBtn.addEventListener('click', async () => {
+        closeReentregaPrompt();
+        if (!pendingReceberPayload || !pendingReentregaInfo) return;
+        const info = pendingReentregaInfo;
+        await submitReceber(pendingReceberPayload, { skipRefresh: true });
+        try {
+            const designResp = await fetch('/instrumentos/api/designar/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCSRF()},
+                body: JSON.stringify({
+                    funcionario_id: info.funcionario_id,
+                    instrumento_id: info.instrumento_id,
+                    copy_assinatura_from_posse_id: info.posse_id || null,
+                })
+            });
+            const dj = await designResp.json();
+            if (!dj.success) {
+                alert('Recebimento registrado, mas não foi possível reatribuir: ' + (dj.message || ''));
+            }
+        } catch(e) {
+            alert('Recebimento registrado, mas ocorreu um erro ao reatribuir o instrumento.');
+        }
+        await loadHomeInstrumentos();
+    });
+}
 
-// const reentregaConfirmBtn = document.getElementById('btnReentregaConfirm');
-// if (reentregaConfirmBtn) {
-//     reentregaConfirmBtn.addEventListener('click', async () => {
-//         closeReentregaPrompt();
-//         if (pendingReceberPayload) {
-//             await submitReceber(pendingReceberPayload, { shouldRedirect: true });
-//         }
-//     });
-// }
-
-// const reentregaCloseBtn = document.getElementById('btnReentregaClose');
-// if (reentregaCloseBtn) {
-//     reentregaCloseBtn.addEventListener('click', () => {
-//         closeReentregaPrompt(true);
-//     });
-// }
+const reentregaCloseBtn = document.getElementById('btnReentregaClose');
+if (reentregaCloseBtn) {
+    reentregaCloseBtn.addEventListener('click', () => {
+        closeReentregaPrompt(true);
+    });
+}
 </script>
 <script>
 // handler for per-point 'Analisar' buttons in home pontos table
@@ -2114,10 +2291,13 @@ function closeHistoricoModalHome(){
 document.addEventListener('click', function(e){
     const btn = e.target.closest('button[data-action="historico"]');
     if (!btn) return;
-    const menu = btn.closest('[id^="menu-"]');
-    if (!menu) return;
-    const parts = menu.id.split('-');
-    const instId = parts.length>1 ? parts[1] : null;
+    let instId = btn.getAttribute('data-instrumento-id');
+    if (!instId) {
+        const menu = btn.closest('[id^="menu-"]');
+        if (!menu) return;
+        const parts = menu.id.split('-');
+        instId = parts.length>1 ? parts[1] : null;
+    }
     if (!instId) return;
     openHistoricoModalHome(instId);
 });
