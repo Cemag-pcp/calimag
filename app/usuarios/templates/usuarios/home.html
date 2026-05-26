@@ -91,6 +91,7 @@
                                 <option value="entregue">Entregue ao funcionário</option>
                                 <option value="enviado">Enviado ao laboratório</option>
                                 <option value="recebido">Recebido da calibração</option>
+                                <option value="sem_designacao">Sem designação</option>
                             </select>
                         </label>
                         <label class="block">
@@ -517,7 +518,7 @@ buildInstrumentRow = function(inst) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const statusKey = inst.calibration_status || null;
-    let statusBadge = { text: 'Sem anÃ¡lise', cls: 'bg-gray-100 text-gray-700' };
+    let statusBadge = { text: 'Sem análise', cls: 'bg-gray-100 text-gray-700' };
     if (statusKey === 'em_dia') {
         statusBadge = { text: 'Em dia', cls: 'bg-emerald-100 text-emerald-800' };
     } else if (statusKey === 'a_calibrar') {
@@ -525,7 +526,7 @@ buildInstrumentRow = function(inst) {
     } else if (statusKey === 'atrasado') {
         statusBadge = { text: 'Atrasado', cls: 'bg-red-100 text-red-800' };
     } else if (statusKey === 'sem_analise') {
-        statusBadge = { text: 'Sem anÃ¡lise', cls: 'bg-gray-100 text-gray-700' };
+        statusBadge = { text: 'Sem análise', cls: 'bg-gray-100 text-gray-700' };
     } else if (inst.valid_until) {
         const validDate = new Date(inst.valid_until);
         if (!Number.isNaN(validDate.getTime())) {
@@ -559,7 +560,7 @@ buildInstrumentRow = function(inst) {
                         Analisar instrumento
                     </button>
                     <button type="button" class="inline-flex items-center justify-center rounded-md border border-gray-300 shadow-sm px-2 py-1 bg-white text-sm text-gray-700 hover:bg-gray-50" data-action="historico" data-instrumento-id="${inst.id}">
-                        HistÃ³rico
+                        Histórico
                     </button>
     `;
     const defaultActions = `
@@ -893,7 +894,9 @@ async function populateTipoFilter() {
     const select = document.getElementById('filterTipo');
     if (!select) return;
     try {
-        const resp = await fetch('/cadastro/api/tipos_instrumento/');
+        const tipoParams = new URLSearchParams();
+        if (HOME_PMC_SCOPE) tipoParams.append('pmc_categoria', HOME_PMC_SCOPE);
+        const resp = await fetch(`/cadastro/api/tipos_instrumento/?${tipoParams.toString()}`);
         const data = await resp.json();
         const tipos = data.tipos || [];
         const selectedValue = currentFilters.tipo_id || select.value || '';
@@ -1123,7 +1126,7 @@ async function fillPontosTable(instId, container) {
                     const ultimaAnaliseValid = ultimaAnaliseDateRaw && !Number.isNaN(ultimaAnaliseDateRaw.getTime());
                     const needsAnalysis = analyzable && (
                         isSoldaView
-                            ? !ultimaAnaliseValid
+                            ? true
                             : (!ultimaAnaliseValid || (lastEnvioValid && ultimaAnaliseDateRaw < lastEnvioDateRaw))
                     );
                     const resultadoBadge = (() => {

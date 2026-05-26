@@ -189,6 +189,24 @@ def tipos_instrumento_api(request):
     """API para listar tipos de instrumento ativos"""
     try:
         tipos = TipoInstrumento.objects.filter(ativo=True).order_by('descricao')
+        pmc_categoria = (request.GET.get('pmc_categoria') or '').strip().lower()
+        if pmc_categoria:
+            _SOLDA_TIPOS = (
+                'maquina de solda a laser',
+                'maquina de solda digital',
+                'máquina de solda a laser',
+                'máquina de solda digital',
+            )
+            maquinas_q = Q()
+            for t in _SOLDA_TIPOS:
+                maquinas_q |= Q(descricao__iexact=t)
+            gabarito_q = Q(descricao__iexact='gabarito')
+            if pmc_categoria in {'maquinas_solda', 'maquinas-de-solda', 'solda'}:
+                tipos = tipos.filter(maquinas_q)
+            elif pmc_categoria in {'gabaritos', 'gabarito'}:
+                tipos = tipos.filter(gabarito_q)
+            elif pmc_categoria in {'instrumentos', 'instrumento'}:
+                tipos = tipos.exclude(maquinas_q | gabarito_q)
         data = {
             'tipos': [
                 {'id': t.id, 'descricao': t.descricao, 'documento_qualidade': t.documento_qualidade}

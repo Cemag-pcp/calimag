@@ -274,6 +274,13 @@ def instrumentos_status_api(request):
 			qs = qs.filter(
 				status_tipo__istartswith='Recebido do laborat'
 			)
+		elif situacao == 'sem_designacao':
+			open_entregue = StatusInstrumento.objects.filter(
+				instrumento=OuterRef('pk'),
+				tipo_status__istartswith='Entregue ao funcion',
+				data_devolucao__isnull=True
+			)
+			qs = qs.filter(~Exists(open_entregue))
 
 	status_calibracao = (request.GET.get('status_calibracao') or '').strip().lower()
 	if status_calibracao:
@@ -626,6 +633,19 @@ def historico_instrumento(request, instrumento_id):
 			'data': data.isoformat() if data else None,
 			'descricao': status.tipo_status or ''
 		})
+
+	analises = StatusPontoCalibracao.objects.filter(
+		ponto_calibracao__instrumento=instrumento
+	).select_related('ponto_calibracao').order_by('-data_criacao')
+	for analise in analises:
+		resultado = analise.resultado or 'sem resultado'
+		ponto_desc = analise.ponto_calibracao.descricao or f'Ponto {analise.ponto_calibracao.sequencia}'
+		historico.append({
+			'data': analise.data_criacao.isoformat(),
+			'descricao': f'Análise de ponto: {ponto_desc} — {resultado.capitalize()}'
+		})
+
+	historico.sort(key=lambda x: x['data'] or '', reverse=True)
 	return JsonResponse({'instrumento_id': instrumento.id, 'historico': historico})
 
 
