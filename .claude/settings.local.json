@@ -6,7 +6,12 @@
       "mcp__ide__getDiagnostics",
       "Bash(xargs grep -l \"sem_analise\\\\|Sem análise\\\\|without_analysis\")",
       "Bash(xargs grep -l \"receber_da_calibracao\\\\|instrumentos_status\")",
-      "Bash(Get-ChildItem *)"
+      "Bash(Get-ChildItem *)",
+      "Bash(xargs grep -l \"needsAnalysis\\\\|analisar\\\\|status_pontos\")",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_fill_form",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_click"
     ]
   }
 }

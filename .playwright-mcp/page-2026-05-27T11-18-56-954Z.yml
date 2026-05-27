@@ -1,0 +1,15 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - heading "Calimag" [level=2] [ref=e5]
+    - paragraph [ref=e6]: Sistema de Gerenciamento de Calibração
+  - generic [ref=e8]:
+    - generic [ref=e9]:
+      - generic [ref=e10]: Matrícula
+      - textbox "Matrícula" [ref=e11]:
+        - /placeholder: Digite sua matrícula
+    - generic [ref=e12]:
+      - generic [ref=e13]: Senha
+      - textbox "Senha" [ref=e14]:
+        - /placeholder: Digite sua senha
+    - button "Entrar" [ref=e15] [cursor=pointer]
+  - paragraph [ref=e16]: Sistema de Gerenciamento de Equipamentos de Calibração

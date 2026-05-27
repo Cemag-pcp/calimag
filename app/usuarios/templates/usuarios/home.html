@@ -369,7 +369,8 @@ function emphasizeStatusPrefix(text) {
 function buildInstrumentRow(inst) {
     const isSent = inst.status_obj && isSentToLaboratorio(inst.status_obj.tipo_status) && !inst.status_obj.data_devolucao;
     const isReceivable = inst.status_obj && isSentToLaboratorio(inst.status_obj.tipo_status) && !inst.status_obj.data_recebimento;
-    const isAnalyzable = inst.status_obj && ((inst.status_obj.tipo_status && inst.status_obj.tipo_status.startsWith('Recebido')) || Boolean(inst.status_obj.data_recebimento));
+    const isAnalyzable = (inst.status_obj && ((inst.status_obj.tipo_status && inst.status_obj.tipo_status.startsWith('Recebido')) || Boolean(inst.status_obj.data_recebimento))) ||
+        (inst.ultima_calibracao && inst.pontos_ultima_calibracao_analisados === false);
     const hasActiveFuncionario = Boolean(
         inst.status_obj &&
         inst.status_obj.funcionario &&
@@ -498,7 +499,9 @@ buildInstrumentRow = function(inst) {
     const isSoldaView = HOME_PMC_SCOPE === 'maquinas_solda';
     const isSent = inst.status_obj && isSentToLaboratorio(inst.status_obj.tipo_status) && !inst.status_obj.data_devolucao;
     const isReceivable = inst.status_obj && isSentToLaboratorio(inst.status_obj.tipo_status) && !inst.status_obj.data_recebimento;
-    const isAnalyzable = isSoldaView || (inst.status_obj && ((inst.status_obj.tipo_status && inst.status_obj.tipo_status.startsWith('Recebido')) || Boolean(inst.status_obj.data_recebimento)));
+    const isAnalyzable = isSoldaView ||
+        (inst.status_obj && ((inst.status_obj.tipo_status && inst.status_obj.tipo_status.startsWith('Recebido')) || Boolean(inst.status_obj.data_recebimento))) ||
+        (inst.ultima_calibracao && inst.pontos_ultima_calibracao_analisados === false);
     const hasActiveFuncionario = Boolean(
         inst.status_obj &&
         inst.status_obj.funcionario &&
