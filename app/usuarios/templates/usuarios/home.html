@@ -467,7 +467,9 @@ function buildInstrumentRow(inst) {
                             </svg>
                         </button>
 
-                        <div id="menu-${inst.id}" class="w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 hidden z-50" data-floating-menu>
+                        <div id="menu-${inst.id}" class="w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 hidden z-50" data-floating-menu
+                            data-status-date="${inst.status_obj && inst.status_obj.data_entrega ? inst.status_obj.data_entrega : ''}"
+                            data-lab-envio-date="${isSent && inst.status_obj && inst.status_obj.data_entrega ? inst.status_obj.data_entrega : ''}">
                             <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
                                 <button
                                     ${enviarDisabled ? 'disabled aria-disabled="true"' : ''}
@@ -574,7 +576,9 @@ buildInstrumentRow = function(inst) {
                             </svg>
                         </button>
 
-                        <div id="menu-${inst.id}" class="w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 hidden z-50" data-floating-menu>
+                        <div id="menu-${inst.id}" class="w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 hidden z-50" data-floating-menu
+                            data-status-date="${inst.status_obj && inst.status_obj.data_entrega ? inst.status_obj.data_entrega : ''}"
+                            data-lab-envio-date="${isSent && inst.status_obj && inst.status_obj.data_entrega ? inst.status_obj.data_entrega : ''}">
                             <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
                                 <button
                                     ${enviarDisabled ? 'disabled aria-disabled="true"' : ''}
@@ -1366,6 +1370,7 @@ document.addEventListener('click', function(e){
             <div>
                 <label class="block text-sm font-medium text-gray-700">Data de Recebimento</label>
                 <input id="receberDataHome" type="datetime-local" class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                <p id="receberDataHint" class="mt-1 text-xs text-gray-500"></p>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700">Observações (opcional)</label>
@@ -1407,6 +1412,20 @@ function openReceberModalHome(instrumentoId){
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     document.getElementById('receberDataHome').value = now.toISOString().slice(0,16);
+
+    const dataField = document.getElementById('receberDataHome');
+    const hint = document.getElementById('receberDataHint');
+    const menu = document.getElementById(`menu-${instrumentoId}`);
+    const labEnvioISO = menu ? menu.dataset.labEnvioDate : '';
+    if (labEnvioISO) {
+        const minDate = new Date(labEnvioISO);
+        const minLocal = new Date(minDate.getTime() - minDate.getTimezoneOffset() * 60000);
+        dataField.min = minLocal.toISOString().slice(0, 16);
+        if (hint) hint.textContent = `Mínimo: ${minDate.toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})} (data de envio ao laboratório)`;
+    } else {
+        dataField.removeAttribute('min');
+        if (hint) hint.textContent = '';
+    }
 }
 
 function closeReceberModalHome(){
@@ -1444,6 +1463,16 @@ function buildReceberPayload(){
     if (!linkValue) {
         alert('O campo Link do Certificado é obrigatório');
         return null;
+    }
+    if (dataField && dataField.value && dataField.min) {
+        const selected = new Date(dataField.value);
+        const minimum = new Date(dataField.min);
+        if (selected < minimum) {
+            const minDate = new Date(dataField.min);
+            const minStr = minDate.toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+            alert(`A data de recebimento não pode ser anterior à data de envio ao laboratório (${minStr}).`);
+            return null;
+        }
     }
     const payload = {
         instrumento_id: instrumentoId,
@@ -2063,6 +2092,7 @@ document.getElementById('btnConfirmAnalisarHome').addEventListener('click', asyn
             <div>
                 <label class="block text-sm font-medium text-gray-700">Data de Envio</label>
                 <input id="enviarDataHome" type="datetime-local" class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                <p id="enviarDataHint" class="mt-1 text-xs text-gray-500"></p>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700">Observações (opcional)</label>
@@ -2091,6 +2121,21 @@ function openEnviarModalHome(instrumentoId){
     document.getElementById('modalEnviarHome').classList.remove('hidden');
     const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     document.getElementById('enviarDataHome').value = now.toISOString().slice(0,16);
+
+    const dataField = document.getElementById('enviarDataHome');
+    const hint = document.getElementById('enviarDataHint');
+    const menu = document.getElementById(`menu-${instrumentoId}`);
+    const statusDateISO = menu ? menu.dataset.statusDate : '';
+    if (statusDateISO) {
+        const minDate = new Date(statusDateISO);
+        const minLocal = new Date(minDate.getTime() - minDate.getTimezoneOffset() * 60000);
+        dataField.min = minLocal.toISOString().slice(0, 16);
+        if (hint) hint.textContent = `Mínimo: ${minDate.toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})} (último movimento registrado)`;
+    } else {
+        dataField.removeAttribute('min');
+        if (hint) hint.textContent = '';
+    }
+
     loadLabsHome();
 }
 function closeEnviarModalHome(){ document.getElementById('modalEnviarHome').classList.add('hidden'); }
@@ -2141,6 +2186,17 @@ document.getElementById('btnConfirmEnviarHome').addEventListener('click', async 
     if (labVal && labVal !== '__outro__') payload.laboratorio_id = labVal;
     else if (labVal === '__outro__') payload.laboratorio_nome = '';
     if (dataEnv) payload.data_entrega = new Date(dataEnv).toISOString();
+
+    const enviarDataField = document.getElementById('enviarDataHome');
+    if (dataEnv && enviarDataField && enviarDataField.min) {
+        const selected = new Date(dataEnv);
+        const minimum = new Date(enviarDataField.min);
+        if (selected < minimum) {
+            const minStr = minimum.toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+            alert(`A data de envio não pode ser anterior ao último movimento registrado (${minStr}).`);
+            return;
+        }
+    }
 
     isSubmittingEnviarHome = true;
     setEnviarButtonLoading(true);

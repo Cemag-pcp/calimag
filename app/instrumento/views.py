@@ -955,9 +955,13 @@ def designar_instrumento(request):
 			ativo=True,
 		)
 
-		# fechar status anteriores abertos (sem data_devolucao)
+		# fechar status anteriores abertos — apenas os que começaram antes ou na data da entrega
 		try:
-			StatusInstrumento.objects.filter(instrumento=instrumento, data_devolucao__isnull=True).update(data_devolucao=data_inicio)
+			StatusInstrumento.objects.filter(
+				instrumento=instrumento,
+				data_devolucao__isnull=True,
+				data_entrega__lte=data_inicio,
+			).update(data_devolucao=data_inicio)
 		except Exception:
 			pass
 
@@ -1062,6 +1066,15 @@ def devolver_instrumento(request):
 		if posse.funcionario_id != funcionario.id:
 			return JsonResponse({'success': False, 'message': 'Instrumento não está vinculado ao funcionário informado'}, status=400)
 
+		# validação cronológica: data de devolução não pode ser anterior ao início da posse
+		if posse.data_inicio and devolucao_dt < posse.data_inicio:
+			fmt_dev = devolucao_dt.astimezone().strftime('%d/%m/%Y %H:%M')
+			fmt_ini = posse.data_inicio.astimezone().strftime('%d/%m/%Y %H:%M')
+			return JsonResponse({
+				'success': False,
+				'message': f'A data de devolução ({fmt_dev}) não pode ser anterior à data de entrega ao funcionário ({fmt_ini}).'
+			}, status=400)
+
 		observacoes = (data.get('observacoes') or '').strip()
 		posse.data_fim = devolucao_dt
 		posse.ativo = False
@@ -1138,24 +1151,54 @@ def enviar_para_calibracao(request):
 		else:
 			now = timezone.now()
 
-		# fechar status anteriores abertos (sem data_devolucao)
+		# validação cronológica: data de envio não pode ser anterior ao início do status atual
+		status_aberto = StatusInstrumento.objects.filter(
+			instrumento=instrumento,
+			data_devolucao__isnull=True,
+		).order_by('-data_entrega').first()
+		if status_aberto and now < status_aberto.data_entrega:
+			fmt_now = now.astimezone().strftime('%d/%m/%Y %H:%M')
+			fmt_ref = status_aberto.data_entrega.astimezone().strftime('%d/%m/%Y %H:%M')
+			return JsonResponse({
+				'success': False,
+				'message': f'A data de envio ({fmt_now}) não pode ser anterior ao último movimento registrado ({fmt_ref}).'
+			}, status=400)
+
+		# fechar status anteriores abertos — apenas os que começaram antes ou na data do envio
 		try:
-			StatusInstrumento.objects.filter(instrumento=instrumento, data_devolucao__isnull=True).update(data_devolucao=now)
+			StatusInstrumento.objects.filter(
+				instrumento=instrumento,
+				data_devolucao__isnull=True,
+				data_entrega__lte=now,
+			).update(data_devolucao=now)
 		except Exception:
 			pass
 
-		# fechar posses ativas
+		# fechar posses ativas — apenas as que começaram antes ou na data do envio
 		try:
-			FuncionarioInstrumento.objects.filter(instrumento=instrumento, data_fim__isnull=True).update(data_fim=now, ativo=False)
+			FuncionarioInstrumento.objects.filter(
+				instrumento=instrumento,
+				data_fim__isnull=True,
+				data_inicio__lte=now,
+			).update(data_fim=now, ativo=False)
 		except Exception:
 			pass
 
-		# marcar data_recebimento no Ãºltimo status que ainda nÃ£o tem
+		# marcar data_recebimento apenas no último status de envio a laboratório sem recebimento
 		try:
-			last_without_receb = StatusInstrumento.objects.filter(instrumento=instrumento, data_recebimento__isnull=True).order_by('-data_entrega').first()
+			last_without_receb = (
+				StatusInstrumento.objects.filter(
+					instrumento=instrumento,
+					data_recebimento__isnull=True,
+					tipo_status__startswith='Enviado ao laborat',
+					data_entrega__lte=now,
+				)
+				.order_by('-data_entrega')
+				.first()
+			)
 			if last_without_receb:
 				last_without_receb.data_recebimento = now
-				last_without_receb.save()
+				last_without_receb.save(update_fields=['data_recebimento'])
 		except Exception:
 			pass
 
@@ -1247,7 +1290,21 @@ def receber_da_calibracao(request):
 			recebimento_dt = timezone.now()
 		registro_dt = timezone.now()
 
-		# marcar data_recebimento/data_devolucao no Ãºltimo status de envio que estiver sem recebimento
+		# validação cronológica: data de recebimento não pode ser anterior ao envio ao laboratório
+		ultimo_envio = StatusInstrumento.objects.filter(
+			instrumento=instrumento,
+			tipo_status__startswith='Enviado ao laborat',
+			data_recebimento__isnull=True,
+		).order_by('-data_entrega').first()
+		if ultimo_envio and recebimento_dt < ultimo_envio.data_entrega:
+			fmt_receb = recebimento_dt.astimezone().strftime('%d/%m/%Y %H:%M')
+			fmt_envio = ultimo_envio.data_entrega.astimezone().strftime('%d/%m/%Y %H:%M')
+			return JsonResponse({
+				'success': False,
+				'message': f'A data de recebimento ({fmt_receb}) não pode ser anterior à data de envio ao laboratório ({fmt_envio}).'
+			}, status=400)
+
+		# marcar data_recebimento/data_devolucao no último status de envio que estiver sem recebimento
 		try:
 			last_sent = StatusInstrumento.objects.filter(instrumento=instrumento, tipo_status__startswith='Enviado ao laborat', data_recebimento__isnull=True).order_by('-data_entrega').first()
 			if last_sent:

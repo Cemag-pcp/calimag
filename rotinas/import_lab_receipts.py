@@ -185,7 +185,7 @@ def register_receipt(record: CsvRecord, dry_run: bool) -> None:
         status = StatusInstrumento.objects.create(
             instrumento=instrumento,
             funcionario=None,
-            data_entrega=timezone.now(),
+            data_entrega=record.recebimento,
             data_devolucao=None,
             data_recebimento=record.recebimento,
             observacoes=(record.observacoes or f'Importacao CSV - Recebido do lab {lab_name}'),

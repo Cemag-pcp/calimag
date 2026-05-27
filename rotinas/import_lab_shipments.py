@@ -146,14 +146,25 @@ def ensure_laboratorio(name: str) -> Laboratorio:
 
 
 def close_open_statuses(instrumento: Instrumento, timestamp: timezone.datetime) -> None:
-    FuncionarioInstrumento.objects.filter(instrumento=instrumento, ativo=True).update(ativo=False, data_fim=timestamp)
-    StatusInstrumento.objects.filter(instrumento=instrumento, data_devolucao__isnull=True).update(data_devolucao=timestamp)
+    # Só fecha registros que começaram antes ou na data do envio retroativo
+    FuncionarioInstrumento.objects.filter(
+        instrumento=instrumento, ativo=True, data_inicio__lte=timestamp
+    ).update(ativo=False, data_fim=timestamp)
+    StatusInstrumento.objects.filter(
+        instrumento=instrumento, data_devolucao__isnull=True, data_entrega__lte=timestamp
+    ).update(data_devolucao=timestamp)
+    # Marca recebimento apenas no último envio a laboratório sem recebimento
     last_without_receb = (
-        StatusInstrumento.objects.filter(instrumento=instrumento, data_recebimento__isnull=True)
+        StatusInstrumento.objects.filter(
+            instrumento=instrumento,
+            data_recebimento__isnull=True,
+            tipo_status__startswith="Enviado ao laborat",
+            data_entrega__lte=timestamp,
+        )
         .order_by("-data_entrega")
         .first()
     )
-    if last_without_receb and not last_without_receb.data_recebimento:
+    if last_without_receb:
         last_without_receb.data_recebimento = timestamp
         last_without_receb.save(update_fields=["data_recebimento"])
 
