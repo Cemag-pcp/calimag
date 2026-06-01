@@ -507,7 +507,7 @@ buildInstrumentRow = function(inst) {
         inst.status_obj.funcionario &&
         !inst.status_obj.data_devolucao &&
         inst.status_obj.tipo_status &&
-        inst.status_obj.tipo_status.startsWith('Entregue ao funcionÃ¡rio')
+        inst.status_obj.tipo_status.startsWith('Entregue ao funcionário')
     );
     const jaFoiEnviado = Boolean(inst.has_status_pontos || inst.data_ultimo_envio);
     const primeiroEnvio = !jaFoiEnviado;

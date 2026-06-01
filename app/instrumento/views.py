@@ -1330,16 +1330,61 @@ def receber_da_calibracao(request):
 		try:
 			recv_status = StatusInstrumento.objects.create(
 				instrumento=instrumento,
-				funcionario=receiver_funcionario,
+				funcionario=None,
 				laboratorio=laboratorio_obj if laboratorio_obj else None,
 				data_entrega=registro_dt,
-				data_devolucao=None,
+				data_devolucao=recebimento_dt,
 				data_recebimento=recebimento_dt,
 				observacoes=data.get('observacoes', ''),
 				tipo_status=f'Recebido do laboratório {lab_name}'
 			)
 		except Exception as e:
 			return JsonResponse({'success': False, 'message': f'Erro ao criar status de recebimento: {str(e)}'}, status=500)
+
+		# restaurar posse do funcionário que tinha o instrumento antes do envio ao laboratório
+		try:
+			ultimo_envio = StatusInstrumento.objects.filter(
+				instrumento=instrumento,
+				tipo_status__istartswith='Enviado ao laboratório',
+			).order_by('-data_entrega').first()
+
+			posse_anterior = None
+			if ultimo_envio:
+				posse_anterior = FuncionarioInstrumento.objects.filter(
+					instrumento=instrumento,
+					funcionario__isnull=False,
+					data_fim__isnull=False,
+				).filter(data_fim=ultimo_envio.data_entrega).order_by('-data_inicio').first()
+				if not posse_anterior:
+					posse_anterior = FuncionarioInstrumento.objects.filter(
+						instrumento=instrumento,
+						funcionario__isnull=False,
+						data_fim__isnull=False,
+						data_fim__lte=ultimo_envio.data_entrega,
+					).order_by('-data_fim').first()
+
+			if posse_anterior:
+				entrega_dt = timezone.now()
+				FuncionarioInstrumento.objects.create(
+					funcionario=posse_anterior.funcionario,
+					instrumento=instrumento,
+					data_inicio=entrega_dt,
+					data_fim=None,
+					observacoes='',
+					ativo=True,
+				)
+				StatusInstrumento.objects.create(
+					instrumento=instrumento,
+					funcionario=posse_anterior.funcionario,
+					laboratorio=None,
+					data_entrega=entrega_dt,
+					data_devolucao=None,
+					data_recebimento=None,
+					observacoes='',
+					tipo_status=f'Entregue ao funcionário {posse_anterior.funcionario.nome}',
+				)
+		except Exception:
+			pass
 
 		# criar certificado vinculado
 		try:
