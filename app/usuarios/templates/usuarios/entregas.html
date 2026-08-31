@@ -145,7 +145,7 @@
 
 <!-- Modal Devolução -->
 <div id="devolucaoModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-    <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-lg bg-white">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-3xl shadow-lg rounded-lg bg-white">
         <div class="flex justify-between items-center mb-4">
             <h3 class="text-xl font-bold">Registrar Devolução</h3>
             <button onclick="closeDevolucaoModal()" class="text-gray-400 hover:text-gray-600">×</button>
@@ -161,6 +161,11 @@
                     <select id="devolucao_instrumento" class="w-full px-3 py-2 border rounded" disabled></select>
                 </div>
             </div>
+
+            <div class="flex justify-end">
+                <button onclick="addDevolucaoItem()" class="px-4 py-2 bg-indigo-600 text-white rounded">Adicionar</button>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Data da devolução</label>
@@ -172,6 +177,22 @@
                     <textarea id="devolucao_observacoes" class="w-full px-3 py-2 border rounded h-24"></textarea>
                 </div>
             </div>
+
+            <div class="bg-gray-50 border rounded">
+                <table class="min-w-full">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs">Funcionário</th>
+                            <th class="px-4 py-2 text-left text-xs">Instrumento</th>
+                            <th class="px-4 py-2 text-right text-xs">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="devolucaoTableBody">
+                        <tr><td colspan="3" class="px-4 py-3 text-center text-gray-500">Nenhum item adicionado.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
             <div class="flex justify-end space-x-3">
                 <button onclick="closeDevolucaoModal()" class="px-4 py-2 border rounded">Cancelar</button>
                 <button id="btnSubmitDevolucao" onclick="submitDevolucao()" class="px-6 py-2 bg-emerald-600 text-white rounded">Confirmar devolução</button>
@@ -265,8 +286,7 @@ function renderDesignFuncionarios(funcionarios) {
     setDesignFuncionarioStatus('', false);
     if (window.Choices) {
         designFuncionarioChoices = new Choices('#design_funcionario', {
-            searchEnabled: true,
-            shouldSort: false,
+            ...DEFAULT_CHOICES_OPTIONS,
             itemSelectText: '',
             placeholder: true,
             placeholderValue: 'Selecione funcionário...'
@@ -341,8 +361,7 @@ async function loadDesignInstrumentos() {
         }
         if (window.Choices) {
             designInstrumentoChoices = new Choices('#design_instrumento', {
-                searchEnabled: true,
-                shouldSort: false,
+                ...DEFAULT_CHOICES_OPTIONS,
                 itemSelectText: '',
                 placeholder: true,
                 placeholderValue: 'Selecione instrumento...'
@@ -552,6 +571,7 @@ async function submitDesignWithSignature() {
 </script>
 <script>
 let entregasCache = [];
+let devolucaoItems = [];
 const devolucaoFuncionarioSelect = document.getElementById('devolucao_funcionario');
 const devolucaoInstrumentoSelect = document.getElementById('devolucao_instrumento');
 const devolucaoModalEl = document.getElementById('devolucaoModal');
@@ -575,8 +595,7 @@ function rebuildDevolucaoFuncionarioChoices() {
     }
     if (window.Choices) {
         devolucaoFuncionarioChoices = new Choices('#devolucao_funcionario', {
-            searchEnabled: true,
-            shouldSort: false,
+            ...DEFAULT_CHOICES_OPTIONS,
             itemSelectText: '',
             placeholder: true,
             placeholderValue: 'Selecione funcionário...'
@@ -722,6 +741,8 @@ async function openDevolucaoModal() {
     setDevolucaoOpenButtonLoading(true);
     try {
         await ensureDevolucaoCache();
+        devolucaoItems = [];
+        renderDevolucaoTable();
         populateDevolucaoFuncionarios();
         populateDevolucaoInstrumentos();
         const obsField = document.getElementById('devolucao_observacoes');
@@ -787,12 +808,15 @@ function populateDevolucaoInstrumentos() {
     devolucaoInstrumentoSelect.innerHTML = '<option value="">Selecione instrumento...</option>';
     if (!funcId) {
         devolucaoInstrumentoSelect.disabled = true;
+        updateDevolucaoDataMin();
         return;
     }
-    const ativos = (entregasCache || []).filter(item => item.ativo && String(item.funcionario_id) === funcId);
+    const jaAdicionados = new Set(devolucaoItems.map(it => String(it.instrumento_id)));
+    const ativos = (entregasCache || []).filter(item => item.ativo && String(item.funcionario_id) === funcId && !jaAdicionados.has(String(item.instrumento_id)));
     if (!ativos.length) {
-        devolucaoInstrumentoSelect.innerHTML = '<option value="">Nenhum instrumento ativo</option>';
+        devolucaoInstrumentoSelect.innerHTML = '<option value="">Nenhum instrumento ativo disponível</option>';
         devolucaoInstrumentoSelect.disabled = true;
+        updateDevolucaoDataMin();
         return;
     }
     ativos.forEach(item => {
@@ -807,27 +831,67 @@ function updateDevolucaoDataMin() {
     const select = document.getElementById('devolucao_instrumento');
     const dataField = document.getElementById('devolucao_data');
     const hint = document.getElementById('devolucaoDataHint');
-    if (!select || !dataField) return;
-    const selected = select.options[select.selectedIndex];
-    const inicioISO = selected ? selected.dataset.inicio : '';
-    if (inicioISO) {
-        const minDate = new Date(inicioISO);
+    if (!dataField) return;
+    const candidatas = devolucaoItems.map(it => it.data_inicio).filter(Boolean);
+    if (select && select.value) {
+        const selected = select.options[select.selectedIndex];
+        if (selected && selected.dataset.inicio) candidatas.push(selected.dataset.inicio);
+    }
+    if (candidatas.length) {
+        const minDate = new Date(candidatas.reduce((max, iso) => (new Date(iso) > new Date(max) ? iso : max), candidatas[0]));
         const minLocal = new Date(minDate.getTime() - minDate.getTimezoneOffset() * 60000);
         dataField.min = minLocal.toISOString().slice(0, 16);
-        if (hint) hint.textContent = `Mínimo: ${minDate.toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})} (data de entrega ao funcionário)`;
+        if (hint) hint.textContent = `Mínimo: ${minDate.toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})} (entrega mais recente entre os itens selecionados)`;
     } else {
         dataField.removeAttribute('min');
         if (hint) hint.textContent = '';
     }
 }
 
+function addDevolucaoItem() {
+    const funcId = devolucaoFuncionarioSelect ? devolucaoFuncionarioSelect.value : '';
+    const instId = devolucaoInstrumentoSelect ? devolucaoInstrumentoSelect.value : '';
+    if (!funcId || !instId) { alert('Selecione funcionário e instrumento'); return; }
+    if (devolucaoItems.find(it => it.instrumento_id == instId)) { alert('Instrumento já adicionado'); return; }
+    const item = (entregasCache || []).find(e => e.ativo && String(e.funcionario_id) === funcId && String(e.instrumento_id) === instId);
+    if (!item) { alert('Não foi possível localizar a entrega ativa deste instrumento.'); return; }
+    devolucaoItems.push({
+        funcionario_id: funcId,
+        instrumento_id: instId,
+        funcionario_label: `${item.funcionario_matricula || 'Sem matrícula'} - ${item.funcionario || 'Sem nome'}`,
+        instrumento_label: `${item.instrumento_codigo || '-'} - ${item.instrumento_descricao || ''}`,
+        data_inicio: item.data_inicio || null
+    });
+    renderDevolucaoTable();
+    populateDevolucaoInstrumentos();
+}
+
+function renderDevolucaoTable() {
+    const tbody = document.getElementById('devolucaoTableBody');
+    if (!tbody) return;
+    if (!devolucaoItems.length) {
+        tbody.innerHTML = '<tr><td colspan="3" class="px-4 py-3 text-center text-gray-500">Nenhum item adicionado.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = devolucaoItems.map((it, idx) => `
+        <tr class="hover:bg-gray-50">
+            <td class="px-4 py-2 text-sm">${it.funcionario_label}</td>
+            <td class="px-4 py-2 text-sm">${it.instrumento_label}</td>
+            <td class="px-4 py-2 text-right text-sm"><button onclick="removeDevolucaoItem(${idx})" class="text-red-600">Remover</button></td>
+        </tr>
+    `).join('');
+}
+
+function removeDevolucaoItem(index) {
+    devolucaoItems.splice(index, 1);
+    renderDevolucaoTable();
+    populateDevolucaoInstrumentos();
+}
+
 async function submitDevolucao() {
     const submitBtn = document.getElementById('btnSubmitDevolucao');
     const originalText = submitBtn ? submitBtn.textContent : '';
-    const funcId = devolucaoFuncionarioSelect ? devolucaoFuncionarioSelect.value : '';
-    const instId = devolucaoInstrumentoSelect ? devolucaoInstrumentoSelect.value : '';
-    if (!funcId) { alert('Selecione o funcionário responsável pela devolução.'); return; }
-    if (!instId) { alert('Selecione o instrumento que será devolvido.'); return; }
+    if (!devolucaoItems.length) { alert('Adicione ao menos um item para devolver.'); return; }
     const dateField = document.getElementById('devolucao_data');
     const obsField = document.getElementById('devolucao_observacoes');
 
@@ -836,22 +900,19 @@ async function submitDevolucao() {
         const minimum = new Date(dateField.min);
         if (selected < minimum) {
             const minStr = minimum.toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
-            alert(`A data de devolução não pode ser anterior à data de entrega ao funcionário (${minStr}).`);
+            alert(`A data de devolução não pode ser anterior à entrega mais recente entre os itens selecionados (${minStr}).`);
             return;
         }
     }
 
-    const payload = {
-        funcionario_id: funcId,
-        instrumento_id: instId,
-        observacoes: obsField ? obsField.value.trim() : ''
-    };
+    let dataDevolucaoISO = null;
     if (dateField && dateField.value) {
         const parsed = new Date(dateField.value);
         if (!isNaN(parsed.getTime())) {
-            payload.data_devolucao = parsed.toISOString();
+            dataDevolucaoISO = parsed.toISOString();
         }
     }
+    const observacoes = obsField ? obsField.value.trim() : '';
 
     if (submitBtn) {
         submitBtn.disabled = true;
@@ -859,31 +920,44 @@ async function submitDevolucao() {
         submitBtn.textContent = 'Registrando...';
     }
 
-    try {
-        const resp = await fetch('/instrumentos/api/devolver/', {
+    const promises = devolucaoItems.map(item => {
+        const payload = {
+            funcionario_id: item.funcionario_id,
+            instrumento_id: item.instrumento_id,
+            observacoes
+        };
+        if (dataDevolucaoISO) payload.data_devolucao = dataDevolucaoISO;
+        return fetch('/instrumentos/api/devolver/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCSRF()
             },
             body: JSON.stringify(payload)
-        });
-        const result = await resp.json();
-        if (!resp.ok || !result.success) {
-            throw new Error(result.message || 'Falha ao registrar devoluÃ§Ã£o');
+        }).then(r => r.json());
+    });
+
+    try {
+        const results = await Promise.all(promises);
+        const errors = results.filter(r => !r.success);
+        if (errors.length) {
+            alert(`${errors.length} de ${devolucaoItems.length} devolução(ões) falharam: ${errors.map(e => e.message).join(' | ')}`);
+        } else {
+            alert('Devolução(ões) registrada(s) com sucesso');
+            devolucaoItems = [];
+            renderDevolucaoTable();
+            closeDevolucaoModal();
         }
-        alert('DevoluÃ§Ã£o registrada com sucesso');
-        closeDevolucaoModal();
         await refreshDevolucaoCache(true);
         await loadEntregas({ pageOverride: entregasPagination.page });
     } catch (error) {
         console.error(error);
-        alert(error.message || 'Erro ao registrar devoluÃ§Ã£o');
+        alert('Erro ao registrar devolução');
     } finally {
         if (submitBtn) {
             submitBtn.disabled = false;
             submitBtn.classList.remove('opacity-70');
-            submitBtn.textContent = originalText || 'Confirmar devoluÃ§Ã£o';
+            submitBtn.textContent = originalText || 'Confirmar devolução';
         }
     }
 }

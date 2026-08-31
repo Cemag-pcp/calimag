@@ -297,7 +297,9 @@ const DEFAULT_CHOICES_OPTIONS = {
         threshold: 0.0,
         ignoreLocation: true,
         distance: 0,
-    }
+    },
+    // Padrão do Choices.js limita a 4 resultados na busca; sem limite aqui
+    searchResultLimit: -1,
 };
 
 function initChoicesForAll(selector = '[data-choices]') {

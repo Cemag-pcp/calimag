@@ -185,6 +185,7 @@
                         <th data-col="status_calibracao" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status da calibração</th>
                         <th data-col="pontos_analisados" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pontos analisados</th>
                         <th data-col="ultima_calibracao" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Última calibração</th>
+                        <th data-col="periodicidade" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Periodicidade</th>
                         <th data-col="valido_ate" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Válido até</th>
                         <th data-col="ultimo_certificado" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Último certificado</th>
                         <th data-col="acoes" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ações</th>
@@ -219,6 +220,7 @@ var HOME_TABLE_COLUMNS = [
     { key: 'status_calibracao', label: 'Status da calibração' },
     { key: 'pontos_analisados', label: 'Pontos analisados' },
     { key: 'ultima_calibracao', label: 'Última calibração' },
+    { key: 'periodicidade', label: 'Periodicidade' },
     { key: 'valido_ate', label: 'Válido até' },
     { key: 'ultimo_certificado', label: 'Último certificado' },
     { key: 'acoes', label: 'Ações' }
@@ -450,6 +452,7 @@ function buildInstrumentRow(inst) {
                 <span class="px-2 py-1 text-xs font-semibold rounded-full ${pontosBadge.cls}">${pontosBadge.text}</span>
             </td>
             <td data-col="ultima_calibracao" class="px-6 py-4">${inst.ultima_calibracao ? new Date(inst.ultima_calibracao).toLocaleDateString() : '-'}</td>
+            <td data-col="periodicidade" class="px-6 py-4">${Number.isFinite(inst.periodicidade_calibracao) ? `${inst.periodicidade_calibracao} dias` : '-'}</td>
             <td data-col="valido_ate" class="px-6 py-4">${inst.valid_until ? new Date(inst.valid_until).toLocaleDateString() : '-'}</td>
             <td data-col="ultimo_certificado" class="px-6 py-4">
                 ${inst.ultimo_certificado
@@ -619,6 +622,7 @@ buildInstrumentRow = function(inst) {
                 <span class="px-2 py-1 text-xs font-semibold rounded-full ${pontosBadge.cls}">${pontosBadge.text}</span>
             </td>
             <td data-col="ultima_calibracao" class="px-6 py-4">${inst.ultima_calibracao ? new Date(inst.ultima_calibracao).toLocaleDateString() : '-'}</td>
+            <td data-col="periodicidade" class="px-6 py-4">${Number.isFinite(inst.periodicidade_calibracao) ? `${inst.periodicidade_calibracao} dias` : '-'}</td>
             <td data-col="valido_ate" class="px-6 py-4">${inst.valid_until ? new Date(inst.valid_until).toLocaleDateString() : '-'}</td>
             <td data-col="ultimo_certificado" class="px-6 py-4">
                 ${inst.ultimo_certificado
