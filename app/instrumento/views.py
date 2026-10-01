@@ -427,7 +427,10 @@ def instrumentos_status_api(request):
 @require_GET
 def indicadores_dashboard(request):
 	"""Retorna agregados para cards de indicadores da home.
-	Apenas instrumentos com instrumento_controlado=True entram nos cálculos.
+	Apenas instrumentos com instrumento_controlado=True entram nos cálculos,
+	e apenas os que estão atualmente com algum funcionário (em operação) —
+	ou seja, 'Em calibração' sempre retorna 0 neste escopo, já que um
+	instrumento em laboratório não está com funcionário.
 	"""
 	is_maquinas_solda = _is_pmc_maquinas_solda(request.GET.get('pmc_categoria'))
 
@@ -460,7 +463,7 @@ def indicadores_dashboard(request):
 	).order_by('-data_criacao', '-id')
 
 
-	instrumentos_data = list(
+	instrumentos_data_all = list(
 		active_instrumentos.annotate(
 			ultimo_status_tipo=Subquery(latest_status_qs.values('tipo_status')[:1]),
 			ultimo_status_devolucao=Subquery(latest_status_qs.values('data_devolucao')[:1]),
@@ -477,6 +480,14 @@ def indicadores_dashboard(request):
 			'periodicidade_calibracao'
 		)
 	)
+
+	# Restringe aos instrumentos atualmente com algum funcionário (em operação)
+	instrumentos_data = [
+		inst for inst in instrumentos_data_all
+		if (inst.get('ultimo_status_tipo') or '').lower().startswith('entregue ao funcionário')
+		and inst.get('ultimo_status_devolucao') is None
+	]
+	operacao_ids = [inst['id'] for inst in instrumentos_data]
 
 	# ===== CONTADORES DE INSTRUMENTOS =====
 	instrumentos_operacao = 0
@@ -504,7 +515,7 @@ def indicadores_dashboard(request):
 			if valid_until < today:
 				instrumentos_atraso += 1
 
-	# ===== PONTOS DE CALIBRAÇÃO (APENAS DE INSTRUMENTOS CONTROLADOS) =====
+	# ===== PONTOS DE CALIBRAÇÃO (APENAS DE INSTRUMENTOS EM OPERAÇÃO) =====
 	ultima_analise_ponto_qs = StatusPontoCalibracao.objects.filter(
 		ponto_calibracao=OuterRef('pk')
 	).order_by('-data_criacao')
@@ -513,7 +524,7 @@ def indicadores_dashboard(request):
 		ativo=True,
 		instrumento__status='ativo',
 		instrumento__instrumento_controlado=True,
-		instrumento_id__in=active_instrumentos.values('id')
+		instrumento_id__in=operacao_ids
 	).annotate(
 		ultima_analise_data=Subquery(ultima_analise_ponto_qs.values('data_criacao')[:1])
 	).values('instrumento_id', 'ultima_analise_data')

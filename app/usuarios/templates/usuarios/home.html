@@ -9,10 +9,10 @@
 
     <!-- Placeholder Cards para Indicadores -->
     <section class="mb-10">
-        <div id="indicadoresGrid" class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div id="indicadoresGrid" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <article class="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-slate-100 p-5 shadow-sm">
                 <h4 class="mt-2 text-lg font-semibold text-slate-900">Pendente análise</h4>
-                <p class="text-sm text-slate-500">Faixas que voltaram da calibração mas não foram analisadas.</p>
+                <p class="text-sm text-slate-500">Entre os instrumentos com funcionários, faixas que voltaram da calibração mas não foram analisadas.</p>
                 <div class="mt-6 flex items-center gap-3">
                     <div class="flex-1">
                         <p id="indicadorPontosPendentes" class="text-3xl font-bold text-slate-900">--</p>
@@ -29,17 +29,8 @@
                 </div>
             </article>
             <article class="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-slate-100 p-5 shadow-sm">
-                <h4 class="mt-2 text-lg font-semibold text-slate-900">Em calibração</h4>
-                <p class="text-sm text-slate-500">Instrumentos e máquinas que estão em processo de calibração.</p>
-                <div class="mt-6 flex items-center gap-3">
-                    <div class="flex-1">
-                        <p id="indicadorCalibracao" class="text-3xl font-bold text-slate-900">--</p>
-                    </div>
-                </div>
-            </article>
-            <article class="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-slate-100 p-5 shadow-sm">
                 <h4 class="mt-2 text-lg font-semibold text-slate-900">Em atraso</h4>
-                <p class="text-sm text-slate-500">Instrumentos e máquinas com calibração vencida.</p>
+                <p class="text-sm text-slate-500">Entre os instrumentos com funcionários, quantos estão com calibração vencida.</p>
                 <div class="mt-6 flex items-center gap-3">
                     <div class="flex-1">
                         <p id="indicadorAtraso" class="text-3xl font-bold text-slate-900">--</p>
@@ -327,9 +318,8 @@ function setupHomeColumnVisibilityControl() {
 async function loadIndicadoresDashboard() {
     const pontosEl = document.getElementById('indicadorPontosPendentes');
     const operacaoEl = document.getElementById('indicadorOperacao');
-    const calibracaoEl = document.getElementById('indicadorCalibracao');
     const atrasoEl = document.getElementById('indicadorAtraso');
-    if (!pontosEl || !operacaoEl || !calibracaoEl || !atrasoEl) return;
+    if (!pontosEl || !operacaoEl || !atrasoEl) return;
     try {
         const params = new URLSearchParams();
         if (HOME_PMC_SCOPE) params.append('pmc_categoria', HOME_PMC_SCOPE);
@@ -341,13 +331,11 @@ async function loadIndicadoresDashboard() {
         };
         pontosEl.textContent = formatNumber(data.pontos_pendentes);
         operacaoEl.textContent = formatNumber(data.instrumentos_operacao);
-        calibracaoEl.textContent = formatNumber(data.instrumentos_calibracao);
         atrasoEl.textContent = formatNumber(data.instrumentos_atraso);
     } catch (error) {
         console.error('Erro ao carregar indicadores:', error);
         pontosEl.textContent = '—';
         operacaoEl.textContent = '—';
-        calibracaoEl.textContent = '—';
         atrasoEl.textContent = '—';
     }
 }
