@@ -529,20 +529,23 @@ def indicadores_dashboard(request):
 		ultima_analise_data=Subquery(ultima_analise_ponto_qs.values('data_criacao')[:1])
 	).values('instrumento_id', 'ultima_analise_data')
 
-	pendentes_pontos = 0
+	instrumentos_pendentes_ids = set()
 	for ponto in active_points:
 		last_envio = instrumento_envio_map.get(ponto['instrumento_id'])
 		last_analysis = ponto.get('ultima_analise_data')
 
 		if is_maquinas_solda:
-			if last_analysis is None:
-				pendentes_pontos += 1
+			pendente = last_analysis is None
 		elif last_envio:
-			if not (last_analysis and last_analysis >= last_envio):
-				pendentes_pontos += 1
+			pendente = not (last_analysis and last_analysis >= last_envio)
 		else:
-			if last_analysis is None:
-				pendentes_pontos += 1
+			pendente = last_analysis is None
+
+		if pendente:
+			instrumentos_pendentes_ids.add(ponto['instrumento_id'])
+
+	# Conta instrumentos distintos com ao menos um ponto pendente, não pontos
+	pendentes_pontos = len(instrumentos_pendentes_ids)
 
 	return JsonResponse({
 		'pontos_pendentes': pendentes_pontos,
