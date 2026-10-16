@@ -1,0 +1,450 @@
+{% extends 'usuarios/base.html' %}
+
+{% block content %}
+
+    <div class="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Certificados e Análises</h1>
+            <p class="text-gray-600 mt-1">Gerencie os registros de análise (incerteza, tendência, resultado) e os certificados de calibração de todos os equipamentos.</p>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="mt-6 bg-white rounded-lg shadow-md p-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Busca</label>
+                <input id="certSearch" type="text" placeholder="Código ou descrição do instrumento, ponto..." class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Resultado</label>
+                <select id="certResultado" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    <option value="all">Todos</option>
+                    <option value="aprovado">Aprovado</option>
+                    <option value="reprovado">Reprovado</option>
+                    <option value="sem_resultado">Sem resultado</option>
+                </select>
+            </div>
+            <div class="flex items-end gap-2">
+                <label class="flex items-center gap-2 text-sm text-gray-700 px-3 py-2 border border-gray-300 rounded-lg w-full cursor-pointer">
+                    <input id="certSemCertificado" type="checkbox" class="rounded border-gray-300" />
+                    Sem certificado vinculado
+                </label>
+            </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Data de</label>
+                <input id="certDataDe" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Data até</label>
+                <input id="certDataAte" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+            <div class="flex items-end">
+                <button id="certRefresh" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 w-full">Aplicar filtros</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela -->
+    <div class="mt-6 bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Instrumento</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ponto</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Resultado</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Incerteza</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tendência</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Responsável</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Certificado</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="certBody" class="bg-white divide-y divide-gray-200"></tbody>
+            </table>
+        </div>
+        <div class="mt-4 flex flex-col gap-3 border-t border-gray-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <p id="certPaginationInfo" class="text-sm text-gray-600">Carregando...</p>
+            <div class="flex gap-2">
+                <button id="certPrevPage" class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 disabled:opacity-50" disabled>Anterior</button>
+                <button id="certNextPage" class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 disabled:opacity-50" disabled>Próximo</button>
+            </div>
+        </div>
+    </div>
+
+<!-- Modal Editar Análise -->
+<div id="certEditModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-lg bg-white">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold">Editar Análise</h3>
+            <button onclick="closeCertEditModal()" class="text-gray-400 hover:text-gray-600">×</button>
+        </div>
+
+        <div class="space-y-4">
+            <div class="bg-gray-50 border rounded p-3 text-sm text-gray-600">
+                <p><span class="font-semibold text-gray-800" id="certEdit_instrumento">-</span></p>
+                <p id="certEdit_ponto">-</p>
+                <p id="certEdit_data">-</p>
+            </div>
+
+            <input type="hidden" id="certEdit_id">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Incerteza</label>
+                    <input id="certEdit_incerteza" type="text" inputmode="decimal" class="w-full px-3 py-2 border rounded" placeholder="Ex.: 0.03" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Média das medições</label>
+                    <input id="certEdit_media" type="text" inputmode="decimal" class="w-full px-3 py-2 border rounded" />
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tendência</label>
+                    <input id="certEdit_tendencia" type="text" class="w-full px-3 py-2 border rounded" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Resultado</label>
+                    <select id="certEdit_resultado" class="w-full px-3 py-2 border rounded">
+                        <option value="">Sem resultado</option>
+                        <option value="aprovado">Aprovado</option>
+                        <option value="reprovado">Reprovado</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Observações</label>
+                <textarea id="certEdit_observacoes" class="w-full px-3 py-2 border rounded h-20"></textarea>
+            </div>
+
+            <div class="border-t pt-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Certificado vinculado</label>
+                <select id="certEdit_certificado" class="w-full px-3 py-2 border rounded">
+                    <option value="">Nenhum</option>
+                </select>
+                <div class="mt-2 flex items-center gap-2">
+                    <input id="certEdit_certificadoLink" type="url" class="flex-1 px-3 py-2 border rounded text-sm" placeholder="Link do certificado selecionado" />
+                    <button onclick="salvarLinkCertificado()" class="px-3 py-2 border rounded text-sm text-gray-700 hover:bg-gray-50 whitespace-nowrap">Corrigir link</button>
+                </div>
+                <p class="mt-1 text-xs text-gray-500">Use "Corrigir link" só se o próprio certificado selecionado estiver com a URL errada (ex.: arquivo do instrumento errado).</p>
+            </div>
+
+            <div class="flex justify-end space-x-3 pt-2">
+                <button onclick="closeCertEditModal()" class="px-4 py-2 border rounded">Cancelar</button>
+                <button id="certBtnSalvar" onclick="salvarAnalise()" class="px-6 py-2 bg-emerald-600 text-white rounded">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function getCSRF() {
+    const name = 'csrftoken';
+    const cookies = document.cookie.split(';').map(c => c.trim());
+    for (const c of cookies) {
+        if (c.startsWith(name + '=')) return decodeURIComponent(c.split('=')[1]);
+    }
+    return '';
+}
+
+var CERT_PAGE_SIZE = 20;
+var certFilters = { search: '', resultado: 'all', sem_certificado: false, data_de: '', data_ate: '' };
+var certPagination = { page: 1, pages: 1, total: 0 };
+var certTableData = [];
+var certSearchTimeout = null;
+var certEditCertificadoChoices = null;
+
+function getCertFiltersFromForm() {
+    return {
+        search: (document.getElementById('certSearch') || {}).value?.trim() || '',
+        resultado: (document.getElementById('certResultado') || {}).value || 'all',
+        sem_certificado: !!(document.getElementById('certSemCertificado') || {}).checked,
+        data_de: (document.getElementById('certDataDe') || {}).value || '',
+        data_ate: (document.getElementById('certDataAte') || {}).value || '',
+    };
+}
+
+async function loadAnalises(options = {}) {
+    const { pageOverride = null, updateFilters = false } = options;
+    if (updateFilters) {
+        certFilters = getCertFiltersFromForm();
+    }
+    if (typeof pageOverride === 'number' && !Number.isNaN(pageOverride)) {
+        certPagination.page = Math.max(1, pageOverride);
+    }
+
+    const params = new URLSearchParams();
+    params.append('page', certPagination.page);
+    params.append('per_page', CERT_PAGE_SIZE);
+    if (certFilters.search) params.append('search', certFilters.search);
+    if (certFilters.resultado && certFilters.resultado !== 'all') params.append('resultado', certFilters.resultado);
+    if (certFilters.sem_certificado) params.append('sem_certificado', '1');
+    if (certFilters.data_de) params.append('data_de', certFilters.data_de);
+    if (certFilters.data_ate) params.append('data_ate', certFilters.data_ate);
+
+    try {
+        showCertTableLoading();
+        const res = await fetch(`/instrumentos/api/analises/?${params.toString()}`);
+        const data = await res.json();
+        certTableData = data.analises || [];
+        certPagination = data.pagination || { page: 1, pages: 1, total: certTableData.length, per_page: CERT_PAGE_SIZE };
+        if (!certPagination.page) certPagination.page = 1;
+        renderCertTable(certTableData);
+        renderCertPagination();
+    } catch (error) {
+        console.error('Erro ao carregar análises:', error);
+        certTableData = [];
+        certPagination = { page: 1, pages: 1, total: 0 };
+        renderCertTable([]);
+        renderCertPagination();
+    }
+}
+
+function showCertTableLoading() {
+    const tbody = document.getElementById('certBody');
+    if (!tbody) return;
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="9" class="px-6 py-8 text-center">
+                <div class="flex flex-col items-center gap-3 text-gray-500">
+                    <svg class="h-6 w-6 animate-spin text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                    </svg>
+                    <span class="text-sm">Carregando...</span>
+                </div>
+            </td>
+        </tr>`;
+}
+
+function renderCertPagination() {
+    const info = document.getElementById('certPaginationInfo');
+    if (info) {
+        const page = certPagination?.page || 1;
+        const pages = certPagination?.pages || 1;
+        const total = certPagination?.total || 0;
+        info.textContent = total ? `Página ${page} de ${pages} — ${total} registro(s)` : 'Nenhum registro encontrado';
+    }
+    const prevBtn = document.getElementById('certPrevPage');
+    if (prevBtn) prevBtn.disabled = !(certPagination && certPagination.page > 1);
+    const nextBtn = document.getElementById('certNextPage');
+    if (nextBtn) nextBtn.disabled = !(certPagination && certPagination.page < certPagination.pages);
+}
+
+function formatResultadoBadge(resultado) {
+    if (resultado === 'aprovado') return '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">Aprovado</span>';
+    if (resultado === 'reprovado') return '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Reprovado</span>';
+    return '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-700">Sem resultado</span>';
+}
+
+function renderCertTable(list) {
+    const tbody = document.getElementById('certBody');
+    if (!tbody) return;
+    if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="9" class="px-4 py-3 text-center text-gray-500">Nenhum registro encontrado.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = list.map(a => `
+        <tr class="hover:bg-gray-50">
+            <td class="px-4 py-2 text-sm">${a.instrumento_codigo || '-'}${a.instrumento_descricao ? ' - ' + a.instrumento_descricao : ''}</td>
+            <td class="px-4 py-2 text-sm">${a.ponto_descricao || '-'}</td>
+            <td class="px-4 py-2 text-sm">${a.data_criacao ? new Date(a.data_criacao).toLocaleString('pt-BR') : '-'}</td>
+            <td class="px-4 py-2 text-sm">${formatResultadoBadge(a.resultado)}</td>
+            <td class="px-4 py-2 text-sm">${a.incerteza ?? '-'}</td>
+            <td class="px-4 py-2 text-sm">${a.tendencia || '-'}</td>
+            <td class="px-4 py-2 text-sm">${a.responsavel_nome || '-'}</td>
+            <td class="px-4 py-2 text-sm">
+                ${a.certificado_id
+                    ? `<a class="text-indigo-600 hover:text-indigo-800 underline" href="${a.certificado_link}" target="_blank" rel="noopener noreferrer">Abrir certificado</a>`
+                    : '<span class="text-gray-400">Sem certificado</span>'}
+            </td>
+            <td class="px-4 py-2 text-right text-sm">
+                <button onclick='openCertEditModal(${JSON.stringify(a)})' class="text-indigo-600 hover:text-indigo-800">Editar</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function openCertEditModal(analise) {
+    document.getElementById('certEdit_id').value = analise.id;
+    document.getElementById('certEdit_instrumento').textContent = `${analise.instrumento_codigo || '-'} ${analise.instrumento_descricao ? '- ' + analise.instrumento_descricao : ''}`;
+    document.getElementById('certEdit_ponto').textContent = `Ponto: ${analise.ponto_descricao || '-'}`;
+    document.getElementById('certEdit_data').textContent = `Analisado em: ${analise.data_criacao ? new Date(analise.data_criacao).toLocaleString('pt-BR') : '-'} ${analise.responsavel_nome ? 'por ' + analise.responsavel_nome : ''}`;
+    document.getElementById('certEdit_incerteza').value = analise.incerteza ?? '';
+    document.getElementById('certEdit_media').value = analise.media_medicoes ?? '';
+    document.getElementById('certEdit_tendencia').value = analise.tendencia || '';
+    document.getElementById('certEdit_resultado').value = analise.resultado || '';
+    document.getElementById('certEdit_observacoes').value = analise.observacoes || '';
+    document.getElementById('certEdit_certificadoLink').value = analise.certificado_link || '';
+
+    document.getElementById('certEditModal').classList.remove('hidden');
+
+    await loadCertificadosDoInstrumento(analise.instrumento_id, analise.certificado_id);
+}
+
+function closeCertEditModal() {
+    document.getElementById('certEditModal').classList.add('hidden');
+}
+
+async function loadCertificadosDoInstrumento(instrumentoId, selectedCertId) {
+    const sel = document.getElementById('certEdit_certificado');
+    if (!sel) return;
+    if (certEditCertificadoChoices) {
+        certEditCertificadoChoices.destroy();
+        certEditCertificadoChoices = null;
+    }
+    sel.innerHTML = '<option value="">Nenhum</option>';
+    if (!instrumentoId) return;
+
+    try {
+        const resp = await fetch(`/instrumentos/api/certificados/?instrumento_id=${instrumentoId}`);
+        const data = await resp.json();
+        (data.certificados || []).forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            const dataFmt = c.data_criacao ? new Date(c.data_criacao).toLocaleDateString('pt-BR') : '-';
+            opt.textContent = `#${c.id} - ${dataFmt} - ${c.status_tipo || ''}`;
+            opt.dataset.link = c.link || '';
+            sel.appendChild(opt);
+        });
+        sel.value = selectedCertId || '';
+    } catch (error) {
+        console.error('Erro ao carregar certificados do instrumento:', error);
+    }
+
+    if (window.Choices) {
+        certEditCertificadoChoices = new Choices(sel, {
+            ...DEFAULT_CHOICES_OPTIONS,
+            itemSelectText: '',
+        });
+    }
+
+    sel.addEventListener('change', () => {
+        const opt = sel.options[sel.selectedIndex];
+        document.getElementById('certEdit_certificadoLink').value = (opt && opt.dataset.link) || '';
+    });
+}
+
+async function salvarAnalise() {
+    const btn = document.getElementById('certBtnSalvar');
+    const originalText = btn ? btn.textContent : '';
+    const payload = {
+        id: document.getElementById('certEdit_id').value,
+        incerteza: document.getElementById('certEdit_incerteza').value.trim(),
+        media_medicoes: document.getElementById('certEdit_media').value.trim(),
+        tendencia: document.getElementById('certEdit_tendencia').value.trim(),
+        resultado: document.getElementById('certEdit_resultado').value,
+        observacoes: document.getElementById('certEdit_observacoes').value.trim(),
+        certificado_id: document.getElementById('certEdit_certificado').value || null,
+    };
+
+    if (btn) {
+        btn.disabled = true;
+        btn.classList.add('opacity-70');
+        btn.textContent = 'Salvando...';
+    }
+
+    try {
+        const resp = await fetch('/instrumentos/api/analises/atualizar/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRF() },
+            body: JSON.stringify(payload),
+        });
+        const result = await resp.json();
+        if (!resp.ok || !result.success) {
+            throw new Error(result.message || 'Falha ao salvar análise.');
+        }
+        closeCertEditModal();
+        await loadAnalises({ pageOverride: certPagination.page });
+    } catch (error) {
+        console.error(error);
+        alert(error.message || 'Erro ao salvar análise.');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.classList.remove('opacity-70');
+            btn.textContent = originalText || 'Salvar';
+        }
+    }
+}
+
+async function salvarLinkCertificado() {
+    const certId = document.getElementById('certEdit_certificado').value;
+    const link = document.getElementById('certEdit_certificadoLink').value.trim();
+    if (!certId) { alert('Selecione um certificado vinculado antes de corrigir o link.'); return; }
+    if (!link) { alert('Informe o link do certificado.'); return; }
+
+    try {
+        const resp = await fetch('/instrumentos/api/certificados/atualizar/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRF() },
+            body: JSON.stringify({ id: certId, link }),
+        });
+        const result = await resp.json();
+        if (!resp.ok || !result.success) {
+            throw new Error(result.message || 'Falha ao corrigir link do certificado.');
+        }
+        alert('Link do certificado atualizado com sucesso.');
+        await loadAnalises({ pageOverride: certPagination.page });
+    } catch (error) {
+        console.error(error);
+        alert(error.message || 'Erro ao corrigir link do certificado.');
+    }
+}
+
+function setupCertPaginationControls() {
+    const prevBtn = document.getElementById('certPrevPage');
+    if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+            if (certPagination && certPagination.page > 1) {
+                loadAnalises({ pageOverride: certPagination.page - 1 });
+            }
+        });
+    }
+    const nextBtn = document.getElementById('certNextPage');
+    if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+            if (certPagination && certPagination.page < certPagination.pages) {
+                loadAnalises({ pageOverride: certPagination.page + 1 });
+            }
+        });
+    }
+}
+
+const certSearchInput = document.getElementById('certSearch');
+if (certSearchInput) {
+    certSearchInput.addEventListener('input', () => {
+        if (certSearchTimeout) clearTimeout(certSearchTimeout);
+        certSearchTimeout = setTimeout(() => {
+            loadAnalises({ pageOverride: 1, updateFilters: true });
+        }, 300);
+    });
+}
+
+const certRefreshBtn = document.getElementById('certRefresh');
+if (certRefreshBtn) {
+    certRefreshBtn.addEventListener('click', () => {
+        loadAnalises({ pageOverride: 1, updateFilters: true });
+    });
+}
+
+const certResultadoSelect = document.getElementById('certResultado');
+if (certResultadoSelect) {
+    certResultadoSelect.addEventListener('change', () => {
+        loadAnalises({ pageOverride: 1, updateFilters: true });
+    });
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    setupCertPaginationControls();
+    loadAnalises({ pageOverride: 1, updateFilters: true });
+});
+</script>
+{% endblock %}

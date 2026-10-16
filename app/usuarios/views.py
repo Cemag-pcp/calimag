@@ -83,3 +83,9 @@ def pmc_gabaritos(request):
 def entregas(request):
     """View da tela de entregas"""
     return render(request, 'usuarios/entregas.html')
+
+
+@login_required
+def certificados(request):
+    """View da tela de gestão de certificados e análises (incertezas)."""
+    return render(request, 'usuarios/certificados.html')

@@ -1500,3 +1500,217 @@ def registrar_status_ponto(request):
 		return JsonResponse({'success': True, 'message': 'Status do ponto registrado', 'status_ponto_id': status_ponto.id})
 	except Exception as e:
 		return JsonResponse({'success': False, 'message': str(e)}, status=400)
+
+
+@login_required
+@require_GET
+def analises_pontos_api(request):
+	"""Lista paginada de registros de análise (StatusPontoCalibracao) de todos os instrumentos,
+	com incerteza, tendência, resultado e certificado vinculado — para a tela de gestão de
+	certificados/incertezas.
+	"""
+	qs = StatusPontoCalibracao.objects.select_related(
+		'ponto_calibracao',
+		'ponto_calibracao__instrumento',
+		'ponto_calibracao__instrumento__tipo_instrumento',
+		'certificado',
+		'responsavel',
+	).order_by('-data_criacao', '-id')
+
+	search = (request.GET.get('search') or '').strip()
+	if search:
+		qs = qs.filter(
+			Q(ponto_calibracao__instrumento__codigo__icontains=search) |
+			Q(ponto_calibracao__instrumento__descricao__icontains=search) |
+			Q(ponto_calibracao__descricao__icontains=search)
+		)
+
+	resultado = (request.GET.get('resultado') or '').strip().lower()
+	if resultado in ('aprovado', 'reprovado'):
+		qs = qs.filter(resultado=resultado)
+	elif resultado == 'sem_resultado':
+		qs = qs.filter(Q(resultado__isnull=True) | Q(resultado=''))
+
+	sem_certificado = (request.GET.get('sem_certificado') or '').strip()
+	if sem_certificado in ('1', 'true', 'on'):
+		qs = qs.filter(certificado__isnull=True)
+
+	data_de = parse_date(request.GET.get('data_de') or '')
+	if data_de:
+		qs = qs.filter(data_criacao__date__gte=data_de)
+	data_ate = parse_date(request.GET.get('data_ate') or '')
+	if data_ate:
+		qs = qs.filter(data_criacao__date__lte=data_ate)
+
+	try:
+		page = int(request.GET.get('page', 1))
+	except (TypeError, ValueError):
+		page = 1
+	try:
+		per_page = int(request.GET.get('per_page', 20))
+	except (TypeError, ValueError):
+		per_page = 20
+	per_page = max(1, min(per_page, 200))
+
+	paginator = Paginator(qs, per_page)
+	page_obj = paginator.get_page(page)
+
+	data = []
+	for sp in page_obj.object_list:
+		ponto = sp.ponto_calibracao
+		instrumento = ponto.instrumento if ponto else None
+		data.append({
+			'id': sp.id,
+			'instrumento_id': instrumento.id if instrumento else None,
+			'instrumento_codigo': instrumento.codigo if instrumento else '',
+			'instrumento_descricao': instrumento.descricao if instrumento else '',
+			'instrumento_tipo': instrumento.tipo_instrumento.descricao if instrumento and instrumento.tipo_instrumento else '',
+			'ponto_id': ponto.id if ponto else None,
+			'ponto_descricao': ponto.descricao if ponto else '',
+			'data_criacao': sp.data_criacao.isoformat() if sp.data_criacao else None,
+			'incerteza': str(sp.incerteza) if sp.incerteza is not None else None,
+			'media_medicoes': str(sp.media_medicoes) if sp.media_medicoes is not None else None,
+			'tendencia': sp.tendencia or '',
+			'resultado': sp.resultado,
+			'observacoes': sp.observacoes or '',
+			'responsavel_id': sp.responsavel_id,
+			'responsavel_nome': sp.responsavel.nome if sp.responsavel else '',
+			'certificado_id': sp.certificado_id,
+			'certificado_link': sp.certificado.link if sp.certificado else '',
+			'certificado_data': sp.certificado.data_criacao.isoformat() if sp.certificado else None,
+		})
+
+	return JsonResponse({
+		'analises': data,
+		'pagination': {
+			'page': page_obj.number,
+			'pages': paginator.num_pages or 1,
+			'total': paginator.count,
+			'has_next': page_obj.has_next(),
+			'has_previous': page_obj.has_previous(),
+			'per_page': per_page,
+		}
+	})
+
+
+@login_required
+@require_http_methods(["POST"])
+def atualizar_analise_ponto(request):
+	"""Atualiza um registro de análise (StatusPontoCalibracao) já existente.
+
+	Recebe JSON: {
+		id: int (obrigatório),
+		incerteza?, media_medicoes?, tendencia?, resultado?, observacoes?,
+		certificado_id?: int | null  (null remove o vínculo)
+	}
+	"""
+	try:
+		try:
+			data = json.loads(request.body)
+		except json.JSONDecodeError:
+			return JsonResponse({'success': False, 'message': 'JSON inválido'}, status=400)
+
+		sp_id = data.get('id')
+		if not sp_id:
+			return JsonResponse({'success': False, 'message': '`id` é obrigatório'}, status=400)
+
+		status_ponto = get_object_or_404(StatusPontoCalibracao, pk=sp_id)
+
+		from decimal import Decimal, InvalidOperation
+
+		if 'incerteza' in data:
+			raw = data.get('incerteza')
+			if raw in (None, ''):
+				status_ponto.incerteza = None
+			else:
+				try:
+					status_ponto.incerteza = Decimal(str(raw).replace(',', '.'))
+				except InvalidOperation:
+					return JsonResponse({'success': False, 'message': 'Incerteza inválida'}, status=400)
+
+		if 'media_medicoes' in data:
+			raw = data.get('media_medicoes')
+			if raw in (None, ''):
+				status_ponto.media_medicoes = None
+			else:
+				try:
+					status_ponto.media_medicoes = Decimal(str(raw).replace(',', '.'))
+				except InvalidOperation:
+					return JsonResponse({'success': False, 'message': 'Média das medições inválida'}, status=400)
+
+		if 'tendencia' in data:
+			status_ponto.tendencia = data.get('tendencia') or ''
+
+		if 'resultado' in data:
+			resultado = data.get('resultado') or None
+			if resultado and resultado not in dict(StatusPontoCalibracao.RESULTADO_CHOICES):
+				return JsonResponse({'success': False, 'message': 'Resultado inválido'}, status=400)
+			status_ponto.resultado = resultado
+
+		if 'observacoes' in data:
+			status_ponto.observacoes = data.get('observacoes') or ''
+
+		if 'certificado_id' in data:
+			cert_id = data.get('certificado_id')
+			if not cert_id:
+				status_ponto.certificado = None
+			else:
+				certificado = get_object_or_404(CertificadoCalibracao, pk=cert_id)
+				status_ponto.certificado = certificado
+
+		status_ponto.save()
+
+		return JsonResponse({'success': True, 'message': 'Análise atualizada com sucesso'})
+	except Exception as e:
+		return JsonResponse({'success': False, 'message': str(e)}, status=400)
+
+
+@login_required
+@require_GET
+def certificados_instrumento_api(request):
+	"""Lista os certificados de calibração de um instrumento (para o seletor de troca de certificado)."""
+	instrumento_id = request.GET.get('instrumento_id')
+	if not instrumento_id:
+		return JsonResponse({'success': False, 'message': 'instrumento_id é obrigatório'}, status=400)
+
+	certificados = CertificadoCalibracao.objects.filter(
+		status__instrumento_id=instrumento_id
+	).select_related('status').order_by('-data_criacao')
+
+	data = [
+		{
+			'id': c.id,
+			'link': c.link,
+			'data_criacao': c.data_criacao.isoformat() if c.data_criacao else None,
+			'status_tipo': c.status.tipo_status if c.status else '',
+		}
+		for c in certificados
+	]
+	return JsonResponse({'success': True, 'certificados': data})
+
+
+@login_required
+@require_http_methods(["POST"])
+def atualizar_certificado(request):
+	"""Corrige o link de um certificado de calibração já existente.
+
+	Recebe JSON: { id: int, link: str }
+	"""
+	try:
+		try:
+			data = json.loads(request.body)
+		except json.JSONDecodeError:
+			return JsonResponse({'success': False, 'message': 'JSON inválido'}, status=400)
+
+		cert_id = data.get('id')
+		link = (data.get('link') or '').strip()
+		if not cert_id or not link:
+			return JsonResponse({'success': False, 'message': '`id` e `link` são obrigatórios'}, status=400)
+
+		certificado = get_object_or_404(CertificadoCalibracao, pk=cert_id)
+		certificado.link = link
+		certificado.save(update_fields=['link'])
+
+		return JsonResponse({'success': True, 'message': 'Certificado atualizado com sucesso'})
+	except Exception as e:
+		return JsonResponse({'success': False, 'message': str(e)}, status=400)

@@ -19,4 +19,8 @@ urlpatterns = [
 	path('api/status/', views.instrumentos_status_api, name='instrumentos_status_api'),
 	path('api/indicadores/', views.indicadores_dashboard, name='indicadores_dashboard'),
 	path('api/disponiveis/', views.instrumentos_disponiveis, name='instrumentos_disponiveis'),
+	path('api/analises/', views.analises_pontos_api, name='analises_pontos_api'),
+	path('api/analises/atualizar/', views.atualizar_analise_ponto, name='atualizar_analise_ponto'),
+	path('api/certificados/', views.certificados_instrumento_api, name='certificados_instrumento_api'),
+	path('api/certificados/atualizar/', views.atualizar_certificado, name='atualizar_certificado'),
 ]
