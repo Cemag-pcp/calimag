@@ -1533,7 +1533,12 @@ def analises_pontos_api(request):
 
 	sem_certificado = (request.GET.get('sem_certificado') or '').strip()
 	if sem_certificado in ('1', 'true', 'on'):
-		qs = qs.filter(certificado__isnull=True)
+		# "Sem certificado válido": sem vínculo algum, ou vinculado a um link que não é
+		# do Google Drive (ex.: nome de arquivo colado por engano, link quebrado).
+		qs = qs.filter(
+			Q(certificado__isnull=True) |
+			~Q(certificado__link__istartswith='https://drive.google.com/')
+		)
 
 	data_de = parse_date(request.GET.get('data_de') or '')
 	if data_de:

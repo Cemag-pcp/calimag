@@ -336,6 +336,7 @@ function runPageInits() {
     const hasInstrumentosTable = content.querySelector('#instrumentosTable');
     const hasFuncionariosTable = content.querySelector('#funcionariosTable');
     const hasSetoresTable = content.querySelector('#setoresBody');
+    const hasCertificadosTable = content.querySelector('#certBody');
 
     console.log('[runPageInits] Tabelas encontradas:', {
         hasHomeTable: !!hasHomeTable,
@@ -344,7 +345,8 @@ function runPageInits() {
         hasTiposTable: !!hasTiposTable,
         hasInstrumentosTable: !!hasInstrumentosTable,
         hasFuncionariosTable: !!hasFuncionariosTable,
-        hasSetoresTable: !!hasSetoresTable
+        hasSetoresTable: !!hasSetoresTable,
+        hasCertificadosTable: !!hasCertificadosTable
     });
 
     let currentPage = null;
@@ -355,6 +357,7 @@ function runPageInits() {
     else if (hasInstrumentosTable) currentPage = 'instrumentos';
     else if (hasFuncionariosTable) currentPage = 'funcionarios';
     else if (hasSetoresTable) currentPage = 'setores';
+    else if (hasCertificadosTable) currentPage = 'certificados';
 
     console.log('[runPageInits] Página detectada:', currentPage);
 
@@ -436,6 +439,16 @@ function runPageInits() {
     if (hasSetoresTable && typeof window.loadSetores === 'function') {
         console.log('[runPageInits] Inicializando Setores');
         window.loadSetores();
+    }
+
+    if (hasCertificadosTable) {
+        console.log('[runPageInits] Inicializando Certificados');
+        if (typeof window.setupCertPaginationControls === 'function') {
+            window.setupCertPaginationControls();
+        }
+        if (typeof window.loadAnalises === 'function') {
+            window.loadAnalises({ pageOverride: 1, updateFilters: true });
+        }
     }
 
     if (currentPage) {

@@ -28,7 +28,7 @@
             <div class="flex items-end gap-2">
                 <label class="flex items-center gap-2 text-sm text-gray-700 px-3 py-2 border border-gray-300 rounded-lg w-full cursor-pointer">
                     <input id="certSemCertificado" type="checkbox" class="rounded border-gray-300" />
-                    Sem certificado vinculado
+                    Sem certificado válido (Drive)
                 </label>
             </div>
         </div>
@@ -171,7 +171,7 @@ function getCertFiltersFromForm() {
     };
 }
 
-async function loadAnalises(options = {}) {
+window.loadAnalises = async function(options = {}) {
     const { pageOverride = null, updateFilters = false } = options;
     if (updateFilters) {
         certFilters = getCertFiltersFromForm();
@@ -238,6 +238,10 @@ function renderCertPagination() {
     if (nextBtn) nextBtn.disabled = !(certPagination && certPagination.page < certPagination.pages);
 }
 
+function isDriveLink(link) {
+    return typeof link === 'string' && link.startsWith('https://drive.google.com/');
+}
+
 function formatResultadoBadge(resultado) {
     if (resultado === 'aprovado') return '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">Aprovado</span>';
     if (resultado === 'reprovado') return '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Reprovado</span>';
@@ -262,7 +266,9 @@ function renderCertTable(list) {
             <td class="px-4 py-2 text-sm">${a.responsavel_nome || '-'}</td>
             <td class="px-4 py-2 text-sm">
                 ${a.certificado_id
-                    ? `<a class="text-indigo-600 hover:text-indigo-800 underline" href="${a.certificado_link}" target="_blank" rel="noopener noreferrer">Abrir certificado</a>`
+                    ? (isDriveLink(a.certificado_link)
+                        ? `<a class="text-indigo-600 hover:text-indigo-800 underline" href="${a.certificado_link}" target="_blank" rel="noopener noreferrer">Abrir certificado</a>`
+                        : `<span class="text-amber-700" title="${a.certificado_link || ''}">Link inválido (não é do Drive)</span>`)
                     : '<span class="text-gray-400">Sem certificado</span>'}
             </td>
             <td class="px-4 py-2 text-right text-sm">
@@ -399,7 +405,7 @@ async function salvarLinkCertificado() {
     }
 }
 
-function setupCertPaginationControls() {
+window.setupCertPaginationControls = function() {
     const prevBtn = document.getElementById('certPrevPage');
     if (prevBtn) {
         prevBtn.addEventListener('click', () => {
