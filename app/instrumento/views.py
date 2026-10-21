@@ -24,12 +24,7 @@ from app.cadastro.models import Instrumento, Funcionario, PontoCalibracao
 from .models import FuncionarioInstrumento, AssinaturaFuncionarioInstrumento, StatusInstrumento, CertificadoCalibracao, StatusPontoCalibracao
 from app.cadastro.models import Laboratorio
 
-PMC_MAQUINAS_SOLDA_TIPOS = (
-	'maquina de solda a laser',
-	'maquina de solda digital',
-	'máquina de solda a laser',
-	'máquina de solda digital',
-)
+PMC_MAQUINAS_SOLDA_TIPO_TRECHO = 'solda'
 PMC_GABARITO_TIPO = 'gabarito'
 
 
@@ -83,10 +78,8 @@ def _apply_pmc_categoria_filter(queryset, categoria):
 	if not pmccat:
 		return queryset
 
-	maquinas_q = Q()
-	for tipo in PMC_MAQUINAS_SOLDA_TIPOS:
-		maquinas_q |= Q(tipo_instrumento__descricao__iexact=tipo)
-	gabarito_q = Q(tipo_instrumento__descricao__iexact=PMC_GABARITO_TIPO)
+	maquinas_q = Q(tipo_instrumento__descricao__icontains=PMC_MAQUINAS_SOLDA_TIPO_TRECHO)
+	gabarito_q = Q(tipo_instrumento__descricao__icontains=PMC_GABARITO_TIPO)
 
 	if _is_pmc_maquinas_solda(pmccat):
 		return queryset.filter(maquinas_q)
