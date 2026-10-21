@@ -17,6 +17,12 @@
                     <div class="flex-1">
                         <p id="indicadorPontosPendentes" class="text-3xl font-bold text-slate-900">--</p>
                     </div>
+                    <button type="button" onclick="applyIndicadorFilter('pendente_analise')" class="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50">
+                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18l-7 8v6l-4 2v-8z" />
+                        </svg>
+                        Filtrar
+                    </button>
                 </div>
             </article>
             <article class="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-slate-100 p-5 shadow-sm">
@@ -26,6 +32,12 @@
                     <div class="flex-1">
                         <p id="indicadorOperacao" class="text-3xl font-bold text-slate-900">--</p>
                     </div>
+                    <button type="button" onclick="applyIndicadorFilter('operacao')" class="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50">
+                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18l-7 8v6l-4 2v-8z" />
+                        </svg>
+                        Filtrar
+                    </button>
                 </div>
             </article>
             <article class="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-slate-100 p-5 shadow-sm">
@@ -35,6 +47,12 @@
                     <div class="flex-1">
                         <p id="indicadorAtraso" class="text-3xl font-bold text-slate-900">--</p>
                     </div>
+                    <button type="button" onclick="applyIndicadorFilter('atraso')" class="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50">
+                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18l-7 8v6l-4 2v-8z" />
+                        </svg>
+                        Filtrar
+                    </button>
                 </div>
             </article>
         </div>
@@ -1041,6 +1059,37 @@ function getFiltersFromForm() {
     if (pontosPendentes && pontosPendentes.checked) filters.pendencias_pontos = '1';
 
     return filters;
+}
+
+function applyIndicadorFilter(tipo) {
+    const form = document.getElementById('instrumentoFilters');
+    if (form) form.reset();
+
+    const situacao = document.getElementById('filterSituacao');
+    const statusCal = document.getElementById('filterStatusCalibracao');
+    const controlado = document.getElementById('filterInstrumentoControlado');
+    const pontosPendentes = document.getElementById('filterPontosPendentes');
+
+    if (situacao) situacao.value = 'entregue';
+    if (controlado) controlado.value = '1';
+
+    if (tipo === 'pendente_analise') {
+        if (statusCal) statusCal.value = 'sem_analise';
+        if (pontosPendentes) pontosPendentes.checked = true;
+    } else if (tipo === 'atraso') {
+        if (statusCal) statusCal.value = 'atrasado';
+        if (pontosPendentes) pontosPendentes.checked = false;
+    } else {
+        if (statusCal) statusCal.value = '';
+        if (pontosPendentes) pontosPendentes.checked = false;
+    }
+
+    currentFilters = getFiltersFromForm();
+    homeCurrentPage = 1;
+    showHomeTableLoading();
+    loadHomeInstrumentos();
+
+    if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function attachFilterHandlers() {
