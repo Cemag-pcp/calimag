@@ -157,7 +157,6 @@ var CERT_PAGE_SIZE = 20;
 var certFilters = { search: '', resultado: 'all', sem_certificado: false, data_de: '', data_ate: '' };
 var certPagination = { page: 1, pages: 1, total: 0 };
 var certTableData = [];
-var certSearchTimeout = null;
 var certEditCertificadoChoices = null;
 
 function getCertFiltersFromForm() {
@@ -422,26 +421,9 @@ window.setupCertPaginationControls = function() {
     }
 }
 
-const certSearchInput = document.getElementById('certSearch');
-if (certSearchInput) {
-    certSearchInput.addEventListener('input', () => {
-        if (certSearchTimeout) clearTimeout(certSearchTimeout);
-        certSearchTimeout = setTimeout(() => {
-            loadAnalises({ pageOverride: 1, updateFilters: true });
-        }, 300);
-    });
-}
-
 const certRefreshBtn = document.getElementById('certRefresh');
 if (certRefreshBtn) {
     certRefreshBtn.addEventListener('click', () => {
-        loadAnalises({ pageOverride: 1, updateFilters: true });
-    });
-}
-
-const certResultadoSelect = document.getElementById('certResultado');
-if (certResultadoSelect) {
-    certResultadoSelect.addEventListener('change', () => {
         loadAnalises({ pageOverride: 1, updateFilters: true });
     });
 }
