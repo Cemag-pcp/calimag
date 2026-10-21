@@ -9,5 +9,5 @@ urlpatterns = [
     path('pmc/maquinas-solda/', views.pmc_maquinas_solda, name='pmc_maquinas_solda'),
     path('pmc/gabaritos/', views.pmc_gabaritos, name='pmc_gabaritos'),
     path('entregas/', views.entregas, name='entregas'),
-    path('certificados/', views.certificados, name='certificados'),
+    path('historico/', views.historico, name='historico'),
 ]

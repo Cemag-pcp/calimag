@@ -86,6 +86,6 @@ def entregas(request):
 
 
 @login_required
-def certificados(request):
-    """View da tela de gestão de certificados e análises (incertezas)."""
-    return render(request, 'usuarios/certificados.html')
+def historico(request):
+    """View da tela de histórico de análises e certificados de calibração (incertezas)."""
+    return render(request, 'usuarios/historico.html')
