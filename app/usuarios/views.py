@@ -52,8 +52,8 @@ def pmc_instrumentos(request):
     return _render_pmc_page(
         request,
         scope='instrumentos',
-        title='Plano mestre de calibracao - Instrumentos',
-        subtitle='Exibe instrumentos gerais (exclui gabaritos e maquinas de solda).',
+        title='PMC - Plano mestre de calibração',
+        subtitle='',
     )
 
 
