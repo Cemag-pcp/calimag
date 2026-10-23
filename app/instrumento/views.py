@@ -33,6 +33,16 @@ def _is_pmc_maquinas_solda(categoria):
 	return pmccat in {'maquinas_solda', 'maquinas-de-solda', 'solda'}
 
 
+def _is_pmc_fluxo_interno(categoria):
+	"""Categorias cuja calibração/verificação é feita internamente, sem envio a
+	laboratório externo: máquinas de solda e gabaritos. Usada para decidir qual regra
+	de validade/pendência de análise aplicar (baseada na última análise de ponto, não
+	no recebimento de laboratório).
+	"""
+	pmccat = (categoria or '').strip().lower()
+	return _is_pmc_maquinas_solda(pmccat) or pmccat in {'gabaritos', 'gabarito'}
+
+
 def _detect_csv_delimiter(sample_line):
 	"""Infer the delimiter used in a CSV sample line."""
 	if not sample_line:
@@ -103,7 +113,10 @@ def instrumentos_descricoes_api(request):
 @login_required
 @require_GET
 def instrumentos_status_api(request):
-	is_maquinas_solda = _is_pmc_maquinas_solda(request.GET.get('pmc_categoria'))
+	# Máquinas de solda e gabaritos são calibrados/verificados internamente, sem
+	# envio a laboratório externo — por isso usam a regra baseada na última análise
+	# de ponto, em vez da regra baseada em recebimento de laboratório.
+	fluxo_interno = _is_pmc_fluxo_interno(request.GET.get('pmc_categoria'))
 
 	qs = (
 		Instrumento.objects
@@ -205,7 +218,7 @@ def instrumentos_status_api(request):
 	)
 
 	fallback_date = timezone.make_aware(datetime.datetime(1900, 1, 1))
-	if is_maquinas_solda:
+	if fluxo_interno:
 		qs = qs.annotate(
 			pontos_analisados_count=Count(
 				'pontos_calibracao',
@@ -288,7 +301,7 @@ def instrumentos_status_api(request):
 		elif status_calibracao == 'atrasado':
 			qs = qs.filter(valid_until__date__lt=today)
 		elif status_calibracao == 'sem_analise':
-			if is_maquinas_solda:
+			if fluxo_interno:
 				qs = qs.filter(
 					Q(valid_until__isnull=True) |
 					Q(
@@ -353,7 +366,7 @@ def instrumentos_status_api(request):
 		if not pontos_ok:
 			pending_analysis_count += 1
 
-		last_recebimento = inst.ultima_analise_data if is_maquinas_solda else inst.last_recebimento_data
+		last_recebimento = inst.ultima_analise_data if fluxo_interno else inst.last_recebimento_data
 		valid_until = (
 			last_recebimento + timedelta(days=inst.periodicidade_calibracao)
 			if last_recebimento else None
@@ -425,7 +438,7 @@ def indicadores_dashboard(request):
 	ou seja, 'Em calibração' sempre retorna 0 neste escopo, já que um
 	instrumento em laboratório não está com funcionário.
 	"""
-	is_maquinas_solda = _is_pmc_maquinas_solda(request.GET.get('pmc_categoria'))
+	fluxo_interno = _is_pmc_fluxo_interno(request.GET.get('pmc_categoria'))
 
 	# ===== INSTRUMENTOS ATIVOS E CONTROLADOS =====
 	active_instrumentos = Instrumento.objects.filter(
@@ -497,11 +510,11 @@ def indicadores_dashboard(request):
 		if tipo_status.startswith('entregue ao funcionário') and data_devolucao is None:
 			instrumentos_operacao += 1
 
-		if not is_maquinas_solda and tipo_status.startswith('enviado ao laboratório') and data_recebimento is None:
+		if not fluxo_interno and tipo_status.startswith('enviado ao laboratório') and data_recebimento is None:
 			instrumentos_calibracao += 1
 
 		instrumento_envio_map[inst['id']] = inst.get('ultimo_envio_data')
-		base_calibracao = inst.get('ultima_analise_data') if is_maquinas_solda else data_recebimento
+		base_calibracao = inst.get('ultima_analise_data') if fluxo_interno else data_recebimento
 		if base_calibracao:
 			periodicidade = inst.get('periodicidade_calibracao') or 0
 			valid_until = (base_calibracao + timedelta(days=periodicidade)).date()
@@ -527,7 +540,7 @@ def indicadores_dashboard(request):
 		last_envio = instrumento_envio_map.get(ponto['instrumento_id'])
 		last_analysis = ponto.get('ultima_analise_data')
 
-		if is_maquinas_solda:
+		if fluxo_interno:
 			pendente = last_analysis is None
 		elif last_envio:
 			pendente = not (last_analysis and last_analysis >= last_envio)

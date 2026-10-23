@@ -505,10 +505,12 @@ function buildInstrumentRow(inst) {
 }
 
 buildInstrumentRow = function(inst) {
-    const isSoldaView = HOME_PMC_SCOPE === 'maquinas_solda';
+    // Máquinas de solda e gabaritos são calibrados/verificados internamente,
+    // sem envio a laboratório externo.
+    const isFluxoInterno = HOME_PMC_SCOPE === 'maquinas_solda' || HOME_PMC_SCOPE === 'gabaritos';
     const isSent = inst.status_obj && isSentToLaboratorio(inst.status_obj.tipo_status) && !inst.status_obj.data_devolucao;
     const isReceivable = inst.status_obj && isSentToLaboratorio(inst.status_obj.tipo_status) && !inst.status_obj.data_recebimento;
-    const isAnalyzable = isSoldaView ||
+    const isAnalyzable = isFluxoInterno ||
         (inst.status_obj && ((inst.status_obj.tipo_status && inst.status_obj.tipo_status.startsWith('Recebido')) || Boolean(inst.status_obj.data_recebimento))) ||
         (!isSent && inst.ultima_calibracao && inst.pontos_ultima_calibracao_analisados === false);
     const hasActiveFuncionario = Boolean(
@@ -569,7 +571,7 @@ buildInstrumentRow = function(inst) {
         : (inst.status || '-');
     const formattedUpdateText = emphasizeStatusPrefix(rawUpdateText);
     const funcionarioSetor = hasActiveFuncionario ? (inst.status_obj.funcionario_setor || '-') : '-';
-    const soldaActions = `
+    const fluxoInternoActions = `
                     <button type="button" onclick="openInstrumentAnalysis(${inst.id})" class="inline-flex items-center justify-center rounded-md border border-gray-300 shadow-sm px-2 py-1 bg-white text-sm text-blue-600 hover:bg-gray-50">
                         Analisar instrumento
                     </button>
@@ -637,12 +639,12 @@ buildInstrumentRow = function(inst) {
             </td>
             <td data-col="acoes" class="px-6 py-4 text-right">
                 <div class="inline-flex items-center gap-2">
-                    ${isSoldaView ? soldaActions : defaultActions}
+                    ${isFluxoInterno ? fluxoInternoActions : defaultActions}
                 </div>
             </td>
         </tr>
         <tr id="inst-pontos-${inst.id}" class="hidden">
-            <td colspan="${getHomeVisibleColumnCount()}" data-home-detail-colspan="1" class="px-6 py-4 bg-gray-50" id="inst-pontos-container-${inst.id}" data-analyzable="${isAnalyzable ? '1' : '0'}" data-last-envio="${isSoldaView ? '' : (inst.data_ultimo_envio || '')}"></td>
+            <td colspan="${getHomeVisibleColumnCount()}" data-home-detail-colspan="1" class="px-6 py-4 bg-gray-50" id="inst-pontos-container-${inst.id}" data-analyzable="${isAnalyzable ? '1' : '0'}" data-last-envio="${isFluxoInterno ? '' : (inst.data_ultimo_envio || '')}"></td>
         </tr>
     `;
 }
@@ -1150,7 +1152,7 @@ async function fillPontosTable(instId, container) {
             return;
         }
         const analyzable = container.dataset.analyzable === '1';
-        const isSoldaView = HOME_PMC_SCOPE === 'maquinas_solda';
+        const isFluxoInterno = HOME_PMC_SCOPE === 'maquinas_solda' || HOME_PMC_SCOPE === 'gabaritos';
         const lastEnvioISO = container.dataset.lastEnvio;
         const lastEnvioDateRaw = lastEnvioISO ? new Date(lastEnvioISO) : null;
         const lastEnvioValid = lastEnvioDateRaw && !Number.isNaN(lastEnvioDateRaw.getTime());
@@ -1173,7 +1175,7 @@ async function fillPontosTable(instId, container) {
                     const ultimaAnaliseDateRaw = p.ultima_data_analise ? new Date(p.ultima_data_analise) : null;
                     const ultimaAnaliseValid = ultimaAnaliseDateRaw && !Number.isNaN(ultimaAnaliseDateRaw.getTime());
                     const needsAnalysis = analyzable && (
-                        isSoldaView
+                        isFluxoInterno
                             ? true
                             : (!ultimaAnaliseValid || (lastEnvioValid && ultimaAnaliseDateRaw < lastEnvioDateRaw))
                     );
