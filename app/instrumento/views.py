@@ -628,8 +628,22 @@ def instrumentos_disponiveis(request):
 def historico_instrumento(request, instrumento_id):
 	"""Retorna o histórico de status do instrumento."""
 	instrumento = get_object_or_404(Instrumento, pk=instrumento_id)
-	status_list = StatusInstrumento.objects.filter(instrumento=instrumento).order_by('-data_entrega')
+	historico = _montar_historico_instrumento(instrumento)
+	if historico:
+		historico[0]['undoable'] = True
+	for item in historico[1:]:
+		item['undoable'] = False
+	return JsonResponse({'instrumento_id': instrumento.id, 'historico': historico})
+
+
+def _montar_historico_instrumento(instrumento):
+	"""Monta a linha do tempo (StatusInstrumento + StatusPontoCalibracao) de um instrumento,
+	mais recente primeiro. Usado tanto para exibir o histórico quanto para validar qual
+	etapa pode ser desfeita (deve ser sempre a primeira da lista).
+	"""
 	historico = []
+
+	status_list = StatusInstrumento.objects.filter(instrumento=instrumento).order_by('-data_entrega')
 	for status in status_list:
 		data = status.data_entrega
 		if status.data_recebimento:
@@ -637,6 +651,9 @@ def historico_instrumento(request, instrumento_id):
 		if status.data_devolucao and (not data or status.data_devolucao > data):
 			data = status.data_devolucao
 		historico.append({
+			'id': status.id,
+			'tipo': 'status_instrumento',
+			'tipo_status': status.tipo_status or '',
 			'data': data.isoformat() if data else None,
 			'descricao': status.tipo_status or ''
 		})
@@ -648,12 +665,133 @@ def historico_instrumento(request, instrumento_id):
 		resultado = analise.resultado or 'sem resultado'
 		ponto_desc = analise.ponto_calibracao.descricao or f'Ponto {analise.ponto_calibracao.sequencia}'
 		historico.append({
+			'id': analise.id,
+			'tipo': 'analise_ponto',
 			'data': analise.data_criacao.isoformat(),
 			'descricao': f'Análise de ponto: {ponto_desc} — {resultado.capitalize()}'
 		})
 
 	historico.sort(key=lambda x: x['data'] or '', reverse=True)
-	return JsonResponse({'instrumento_id': instrumento.id, 'historico': historico})
+	return historico
+
+
+@login_required
+@require_http_methods(["POST"])
+def desfazer_etapa_instrumento(request):
+	"""Desfaz a etapa mais recente do histórico de um instrumento, revertendo todos os
+	efeitos colaterais que aquela ação originalmente causou (reabre o status/posse que
+	ela havia fechado), e apaga o registro da etapa em si.
+
+	Recebe JSON: { instrumento_id, tipo: 'status_instrumento'|'analise_ponto', id }
+
+	Só é permitido desfazer a etapa que está no topo do histórico (a mais recente); isso
+	evita desfazer um passo "no meio" da linha do tempo, o que deixaria estados
+	inconsistentes para trás.
+	"""
+	try:
+		try:
+			data = json.loads(request.body)
+		except json.JSONDecodeError:
+			return JsonResponse({'success': False, 'message': 'JSON inválido'}, status=400)
+
+		instrumento_id = data.get('instrumento_id')
+		tipo = data.get('tipo')
+		item_id = data.get('id')
+		if not instrumento_id or not tipo or not item_id:
+			return JsonResponse({'success': False, 'message': '`instrumento_id`, `tipo` e `id` são obrigatórios'}, status=400)
+
+		instrumento = get_object_or_404(Instrumento, pk=instrumento_id)
+
+		with transaction.atomic():
+			historico = _montar_historico_instrumento(instrumento)
+			if not historico:
+				return JsonResponse({'success': False, 'message': 'Instrumento não possui histórico.'}, status=400)
+
+			topo = historico[0]
+			if topo['tipo'] != tipo or str(topo['id']) != str(item_id):
+				return JsonResponse({
+					'success': False,
+					'message': 'Essa etapa não é mais a mais recente do histórico (a tela pode estar desatualizada). Atualize e tente novamente.'
+				}, status=409)
+
+			if tipo == 'analise_ponto':
+				analise = get_object_or_404(StatusPontoCalibracao, pk=item_id, ponto_calibracao__instrumento=instrumento)
+				analise.delete()
+				return JsonResponse({'success': True, 'message': 'Análise de ponto desfeita com sucesso.'})
+
+			if tipo != 'status_instrumento':
+				return JsonResponse({'success': False, 'message': 'Tipo de etapa desconhecido.'}, status=400)
+
+			status = get_object_or_404(StatusInstrumento, pk=item_id, instrumento=instrumento)
+			tipo_status = (status.tipo_status or '').strip()
+			tipo_status_lower = tipo_status.lower()
+
+			if tipo_status_lower.startswith('enviado ao laborat'):
+				# reabre o(s) status que este envio havia fechado (mesma data_devolucao == data_entrega deste envio)
+				StatusInstrumento.objects.filter(
+					instrumento=instrumento,
+					data_devolucao=status.data_entrega,
+				).exclude(pk=status.pk).update(data_devolucao=None)
+				# reativa a posse que este envio havia encerrado
+				FuncionarioInstrumento.objects.filter(
+					instrumento=instrumento,
+					data_fim=status.data_entrega,
+					ativo=False,
+				).update(ativo=True, data_fim=None)
+				status.delete()
+				return JsonResponse({'success': True, 'message': 'Envio ao laboratório desfeito; status anterior reaberto.'})
+
+			if tipo_status_lower.startswith('recebido do laborat'):
+				# reabre o envio que este recebimento havia fechado
+				envio_fechado = StatusInstrumento.objects.filter(
+					instrumento=instrumento,
+					tipo_status__istartswith='Enviado ao laborat',
+					data_recebimento=status.data_recebimento,
+				).exclude(data_recebimento__isnull=True).order_by('-data_entrega').first()
+				if envio_fechado:
+					envio_fechado.data_recebimento = None
+					envio_fechado.data_devolucao = None
+					envio_fechado.save(update_fields=['data_recebimento', 'data_devolucao'])
+				status.delete()  # cascade apaga o CertificadoCalibracao vinculado
+				return JsonResponse({'success': True, 'message': 'Recebimento do laboratório desfeito; envio anterior reaberto (certificado removido).'})
+
+			if tipo_status_lower.startswith('entregue ao funcion'):
+				# remove a posse criada junto com esta entrega
+				FuncionarioInstrumento.objects.filter(
+					instrumento=instrumento,
+					data_inicio=status.data_entrega,
+					ativo=True,
+				).delete()
+				# se essa entrega tiver fechado algum status anterior, reabre
+				StatusInstrumento.objects.filter(
+					instrumento=instrumento,
+					data_devolucao=status.data_entrega,
+				).exclude(pk=status.pk).update(data_devolucao=None)
+				status.delete()
+				return JsonResponse({'success': True, 'message': 'Entrega ao funcionário desfeita.'})
+
+			if tipo_status_lower.startswith('devolvido pelo funcion'):
+				# reabre a posse que esta devolução havia encerrado
+				FuncionarioInstrumento.objects.filter(
+					instrumento=instrumento,
+					data_fim=status.data_entrega,
+					ativo=False,
+				).update(ativo=True, data_fim=None)
+				# reabre o status "Entregue ao funcionário" que esta devolução havia fechado
+				StatusInstrumento.objects.filter(
+					instrumento=instrumento,
+					tipo_status__istartswith='Entregue ao funcion',
+					data_devolucao=status.data_entrega,
+				).update(data_devolucao=None)
+				status.delete()
+				return JsonResponse({'success': True, 'message': 'Devolução desfeita; posse anterior reativada.'})
+
+			return JsonResponse({
+				'success': False,
+				'message': f'Não sei como desfazer o tipo de etapa "{tipo_status}". Corrija manualmente.'
+			}, status=400)
+	except Exception as e:
+		return JsonResponse({'success': False, 'message': str(e)}, status=400)
 
 
 @login_required

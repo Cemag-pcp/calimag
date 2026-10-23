@@ -11,6 +11,7 @@ urlpatterns = [
 	path('api/devolver/', views.devolver_instrumento, name='devolver_instrumento'),
 	path('api/entregas/', views.entregas_api, name='entregas_api'),
 	path('api/historico/<int:instrumento_id>/', views.historico_instrumento, name='historico_instrumento'),
+	path('api/historico/desfazer/', views.desfazer_etapa_instrumento, name='desfazer_etapa_instrumento'),
 	path('api/ultimo-responsavel/<int:instrumento_id>/', views.ultimo_responsavel_pre_envio, name='ultimo_responsavel_pre_envio'),
 	path('api/enviar/', views.enviar_para_calibracao, name='enviar_para_calibracao'),
 	path('api/receber/', views.receber_da_calibracao, name='receber_da_calibracao'),
