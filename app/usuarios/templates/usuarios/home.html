@@ -1724,6 +1724,8 @@ document.addEventListener('click', function(e){
     };
     if (HOME_PMC_SCOPE === 'maquinas_solda') {
         openAnalisarSoldaModal(pontoId, instrumentoId, meta);
+    } else if (HOME_PMC_SCOPE === 'gabaritos') {
+        openAnalisarGabaritoModal(pontoId, instrumentoId, meta);
     } else {
         openAnalisarModalHome(pontoId, instrumentoId, meta);
     }
@@ -2115,6 +2117,194 @@ document.getElementById('btnConfirmAnalisarHome').addEventListener('click', asyn
             alert('Erro ao salvar análise');
         } finally {
             _isSubmitting = false;
+            btn.disabled = false;
+            btn.textContent = 'Salvar Análise';
+        }
+    });
+})();
+</script>
+
+<!-- Modal Analisar Ponto - Gabarito -->
+<div id="modalAnalisarGabarito" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-lg bg-white">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold">Analisar Ponto — Gabarito</h3>
+            <button onclick="closeAnalisarGabaritoModal()" class="text-gray-400 hover:text-gray-600">✕</button>
+        </div>
+        <input type="hidden" id="gabaritoPontoId">
+        <input type="hidden" id="gabaritoInstrumentoId">
+        <div class="space-y-4">
+            <div class="grid grid-cols-1 gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700 md:grid-cols-3">
+                <div>
+                    <label class="text-xs font-semibold uppercase text-gray-500">Valor nominal</label>
+                    <input id="gabaritoValorNominal" type="number" step="any" placeholder="ex: 220" required class="mt-1 w-full px-2 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-900" />
+                </div>
+                <div>
+                    <p class="text-xs font-semibold uppercase text-gray-500">Tolerância máxima (+)</p>
+                    <p id="gabaritoToleranciaMais" class="font-medium text-gray-900">-</p>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold uppercase text-gray-500">Tolerância mínima (-)</p>
+                    <p id="gabaritoToleranciaMenos" class="font-medium text-gray-900">-</p>
+                </div>
+            </div>
+            <p class="text-sm text-gray-500">Insira a medição para calcular a tendência: <span class="font-medium">(Medição + Incerteza) − Valor Nominal</span></p>
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-3 md:items-end">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Medição</label>
+                    <input id="gabaritoMed1" type="number" step="any" required class="w-full px-2 py-1.5 border border-gray-300 rounded-lg" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Tendência calculada</label>
+                    <input id="gabaritoTendenciaCalc" type="text" readonly required class="w-full px-2 py-1.5 border border-gray-200 bg-gray-100 text-gray-800 rounded-lg" />
+                    <p class="mt-1 text-xs text-gray-500">= (Medição + Incerteza) − Valor Nominal</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Incerteza</label>
+                    <input id="gabaritoIncerteza" type="number" step="0.0001" required class="w-full px-2 py-1.5 border border-gray-300 rounded-lg" />
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Resultado</label>
+                <select id="gabaritoResultado" required class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    <option value="">-- selecione --</option>
+                    <option value="aprovado">Aprovado</option>
+                    <option value="reprovado">Reprovado</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Observações (opcional)</label>
+                <textarea id="gabaritoObs" class="w-full px-3 py-2 border border-gray-300 rounded-lg" rows="3"></textarea>
+            </div>
+            <div class="flex justify-end space-x-3 pt-4 border-t">
+                <button onclick="closeAnalisarGabaritoModal()" class="px-4 py-2 border border-gray-300 rounded-lg">Cancelar</button>
+                <button id="btnConfirmGabarito" class="px-6 py-2 bg-indigo-600 text-white rounded-lg">Salvar Análise</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+(function(){
+    var _gabaritoNominal = '';
+    var _isSubmittingGabarito = false;
+
+    function calcGabaritoTendencia() {
+        const m1 = parseFloat(document.getElementById('gabaritoMed1').value);
+        const nominal = parseFloat(document.getElementById('gabaritoValorNominal').value);
+        const incerteza = parseFloat(document.getElementById('gabaritoIncerteza').value);
+        const calcEl = document.getElementById('gabaritoTendenciaCalc');
+        const tolEl = document.getElementById('gabaritoToleranciaMais');
+        const resultadoEl = document.getElementById('gabaritoResultado');
+        if (!Number.isFinite(m1)) {
+            calcEl.value = '';
+            return;
+        }
+        const inc = Number.isFinite(incerteza) ? incerteza : 0;
+        const tendencia = Number.isFinite(nominal) ? m1 + inc - nominal : m1 + inc;
+        calcEl.value = tendencia.toFixed(4);
+        const tol = tolEl ? parseFloat(tolEl.dataset.value) : NaN;
+        if (Number.isFinite(tol) && resultadoEl) {
+            resultadoEl.value = Math.abs(tendencia) <= tol ? 'aprovado' : 'reprovado';
+        }
+    }
+
+    ['gabaritoMed1', 'gabaritoValorNominal', 'gabaritoIncerteza'].forEach(function(id) {
+        document.getElementById(id).addEventListener('input', calcGabaritoTendencia);
+    });
+
+    window.openAnalisarGabaritoModal = function(pontoId, instrumentoId, meta) {
+        _gabaritoNominal = (meta && meta.valorNominal) ? meta.valorNominal : '';
+        document.getElementById('gabaritoPontoId').value = pontoId || '';
+        document.getElementById('gabaritoInstrumentoId').value = instrumentoId || '';
+        document.getElementById('gabaritoMed1').value = '';
+        document.getElementById('gabaritoTendenciaCalc').value = '';
+        document.getElementById('gabaritoIncerteza').value = '';
+        document.getElementById('gabaritoResultado').value = '';
+        document.getElementById('gabaritoObs').value = '';
+
+        const safeMeta = meta || {};
+        const unidade = safeMeta.unidade || '';
+        const nominalEl = document.getElementById('gabaritoValorNominal');
+        const tolMaisEl = document.getElementById('gabaritoToleranciaMais');
+        const tolMenosEl = document.getElementById('gabaritoToleranciaMenos');
+        if (nominalEl) nominalEl.value = _gabaritoNominal || '';
+        if (tolMaisEl) {
+            tolMaisEl.textContent = safeMeta.toleranciaMais ? `${safeMeta.toleranciaMais} ${unidade}`.trim() : '-';
+            tolMaisEl.dataset.value = safeMeta.toleranciaMais || '';
+        }
+        if (tolMenosEl) {
+            tolMenosEl.textContent = safeMeta.toleranciaMenos ? `${safeMeta.toleranciaMenos} ${unidade}`.trim() : '-';
+            tolMenosEl.dataset.value = safeMeta.toleranciaMenos || '';
+        }
+        document.getElementById('modalAnalisarGabarito').classList.remove('hidden');
+    };
+
+    window.closeAnalisarGabaritoModal = function() {
+        document.getElementById('modalAnalisarGabarito').classList.add('hidden');
+    };
+
+    document.getElementById('btnConfirmGabarito').addEventListener('click', async function() {
+        if (_isSubmittingGabarito) return;
+        const ponto_id = document.getElementById('gabaritoPontoId').value;
+        const instrumento_id = document.getElementById('gabaritoInstrumentoId').value;
+        const valorNominalEl = document.getElementById('gabaritoValorNominal');
+        const med1El = document.getElementById('gabaritoMed1');
+        const incertezaEl = document.getElementById('gabaritoIncerteza');
+        const resultadoEl = document.getElementById('gabaritoResultado');
+        const tendencia = document.getElementById('gabaritoTendenciaCalc').value;
+        const resultado = document.getElementById('gabaritoResultado').value;
+        const observacoes = document.getElementById('gabaritoObs').value || '';
+
+        if (!ponto_id) { alert('Ponto inválido'); return; }
+        const requiredFields = [valorNominalEl, med1El, incertezaEl, resultadoEl];
+        const invalidField = requiredFields.find(function(field) {
+            return !field || !field.reportValidity();
+        });
+        if (invalidField) return;
+        if (!tendencia) { alert('Preencha todos os campos obrigatórios para calcular a tendência.'); return; }
+
+        const incerteza = document.getElementById('gabaritoIncerteza').value || '';
+        const valorNominal = document.getElementById('gabaritoValorNominal').value || '';
+        const m1 = parseFloat(document.getElementById('gabaritoMed1').value);
+        const media = Number.isFinite(m1) ? m1.toFixed(4) : null;
+        const payload = { ponto_id: ponto_id, tendencia: tendencia };
+        if (incerteza) payload.incerteza = incerteza;
+        if (media !== null) payload.media_medicoes = media;
+        if (resultado) payload.resultado = resultado;
+        if (observacoes) payload.observacoes = observacoes;
+
+        _isSubmittingGabarito = true;
+        const btn = document.getElementById('btnConfirmGabarito');
+        btn.disabled = true;
+        btn.textContent = 'Salvando...';
+        try {
+            // salva valor nominal no cadastro do ponto, se informado
+            if (valorNominal !== '') {
+                await fetch(`/cadastro/api/pontos/${ponto_id}/update/`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRF() },
+                    body: JSON.stringify({ valor_nominal: valorNominal })
+                });
+            }
+
+            const res = await fetch('/instrumentos/api/status-ponto/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRF() },
+                body: JSON.stringify(payload)
+            });
+            const j = await res.json();
+            if (j.success) {
+                alert(j.message || 'Análise salva');
+                closeAnalisarGabaritoModal();
+                if (instrumento_id) await refreshHomeInstrument(instrumento_id);
+            } else {
+                alert(j.message || 'Erro ao salvar análise');
+            }
+        } catch (err) {
+            console.error('Erro ao salvar análise:', err);
+            alert('Erro ao salvar análise');
+        } finally {
+            _isSubmittingGabarito = false;
             btn.disabled = false;
             btn.textContent = 'Salvar Análise';
         }
