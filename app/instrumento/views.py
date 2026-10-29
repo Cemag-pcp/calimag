@@ -1499,7 +1499,10 @@ def receber_da_calibracao(request):
 		except Exception as e:
 			return JsonResponse({'success': False, 'message': f'Erro ao criar status de recebimento: {str(e)}'}, status=500)
 
-		# restaurar posse do funcionário que tinha o instrumento antes do envio ao laboratório
+		# restaurar posse do funcionário que tinha o instrumento antes do envio ao laboratório —
+		# só quando o front explicitamente pede (usuário confirmou "Sim, reatribuir" no prompt).
+		# Antes disso rodava sempre, então clicar em "Não" não tinha efeito nenhum.
+		reatribuir = bool(data.get('reatribuir'))
 		try:
 			ultimo_envio = StatusInstrumento.objects.filter(
 				instrumento=instrumento,
@@ -1507,7 +1510,7 @@ def receber_da_calibracao(request):
 			).order_by('-data_entrega').first()
 
 			posse_anterior = None
-			if ultimo_envio:
+			if reatribuir and ultimo_envio:
 				posse_anterior = FuncionarioInstrumento.objects.filter(
 					instrumento=instrumento,
 					funcionario__isnull=False,
