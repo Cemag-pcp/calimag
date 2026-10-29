@@ -1453,6 +1453,11 @@ var pendingReentregaInfo = null;
 var isSubmittingReceber = false;
 
 function openReceberModalHome(instrumentoId){
+    // Garante que um envio travado de uma tentativa anterior (ex.: aba em segundo
+    // plano, requisição que nunca respondeu) não deixe o botão permanentemente sem
+    // reação na próxima tentativa.
+    isSubmittingReceber = false;
+    setReceberButtonLoading(false);
     document.getElementById('receberInstrumentoIdHome').value = instrumentoId;
     document.getElementById('modalReceberHome').classList.remove('hidden');
     const now = new Date();
@@ -1642,24 +1647,41 @@ document.addEventListener('click', function(e){
     openReceberModalHome(instId);
 });
 
-{
-    const confirmarReceberBtn = document.getElementById('btnConfirmReceberHome');
-    if (confirmarReceberBtn && confirmarReceberBtn.dataset.bound !== '1') {
-        confirmarReceberBtn.dataset.bound = '1';
-        confirmarReceberBtn.addEventListener('click', async () => {
-            const payload = buildReceberPayload();
-            if (!payload) return;
-            pendingReceberPayload = payload;
-            const info = await fetchUltimoResponsavel(payload.instrumento_id);
-            if (info && info.funcionario_id) {
-                pendingReentregaInfo = info;
-                openReentregaPrompt(info);
-                return;
-            }
-            await submitReceber(payload);
-        });
+// Delegado em document (em vez de addEventListener direto no botão) para não
+// depender de um binding feito em uma execução de script anterior: se o HTMX
+// recriar o modal/botão numa navegação, um listener preso ao nó antigo ficaria
+// "surdo" e o clique não faria nada — era preciso recarregar a página pra
+// reanexar o listener. Delegar em document resolve isso de vez.
+document.addEventListener('click', async function(e){
+    const btn = e.target.closest('#btnConfirmReceberHome');
+    if (!btn || btn.disabled) return;
+    // Evita clique duplo e também cobre a espera por fetchUltimoResponsavel com
+    // feedback visual (antes só submitReceber desabilitava o botão, deixando
+    // essa janela sem reação nenhuma pro usuário).
+    if (isSubmittingReceber) return;
+    const payload = buildReceberPayload();
+    if (!payload) return;
+    isSubmittingReceber = true;
+    setReceberButtonLoading(true);
+    try {
+        pendingReceberPayload = payload;
+        const info = await fetchUltimoResponsavel(payload.instrumento_id);
+        if (info && info.funcionario_id) {
+            pendingReentregaInfo = info;
+            isSubmittingReceber = false;
+            setReceberButtonLoading(false);
+            openReentregaPrompt(info);
+            return;
+        }
+        isSubmittingReceber = false;
+        await submitReceber(payload);
+    } catch (error) {
+        console.error('Erro ao confirmar recebimento:', error);
+        alert('Erro ao confirmar recebimento. Tente novamente.');
+        isSubmittingReceber = false;
+        setReceberButtonLoading(false);
     }
-}
+});
 
 const reentregaSkipBtn = document.getElementById('btnReentregaSkip');
 if (reentregaSkipBtn) {
