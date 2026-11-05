@@ -90,6 +90,12 @@ class StatusInstrumento(models.Model):
     data_entrega = models.DateTimeField('Data Entrega', default=timezone.now)
     data_devolucao = models.DateTimeField('Data Devolução', null=True, blank=True)
     data_recebimento = models.DateTimeField('Data Recebimento', null=True, blank=True)
+    data_emissao_certificado = models.DateTimeField(
+        'Data de Emissão do Certificado',
+        null=True,
+        blank=True,
+        help_text='Data de emissão do certificado de calibração; a validade/periodicidade é contada a partir dela.'
+    )
     observacoes = models.TextField('Observações', blank=True)
     data_cadastro = models.DateTimeField('Data de Cadastro', auto_now_add=True)
 

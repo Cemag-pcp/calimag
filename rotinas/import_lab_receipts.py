@@ -188,6 +188,7 @@ def register_receipt(record: CsvRecord, dry_run: bool) -> None:
             data_entrega=record.recebimento,
             data_devolucao=None,
             data_recebimento=record.recebimento,
+            data_emissao_certificado=record.recebimento,
             observacoes=(record.observacoes or f'Importacao CSV - Recebido do lab {lab_name}'),
             tipo_status=f'Recebido do laboratorio {lab_name}',
         )

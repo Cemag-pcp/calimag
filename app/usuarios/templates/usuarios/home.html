@@ -1413,10 +1413,17 @@ document.addEventListener('click', function(e){
                 <label class="block text-sm font-medium text-gray-700">Link do Certificado *</label>
                 <input id="receberLinkHome" type="url" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="https://..." />
             </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Data de Recebimento</label>
-                <input id="receberDataHome" type="datetime-local" class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                <p id="receberDataHint" class="mt-1 text-xs text-gray-500"></p>
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Data de Recebimento</label>
+                    <input id="receberDataHome" type="datetime-local" class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                    <p id="receberDataHint" class="mt-1 text-xs text-gray-500"></p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Data de emissão do certificado *</label>
+                    <input id="receberEmissaoCertificadoHome" type="datetime-local" required class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                    <p class="mt-1 text-xs text-gray-500">A validade/periodicidade é contada a partir desta data.</p>
+                </div>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700">Observações (opcional)</label>
@@ -1463,6 +1470,7 @@ function openReceberModalHome(instrumentoId){
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     document.getElementById('receberDataHome').value = now.toISOString().slice(0,16);
+    document.getElementById('receberEmissaoCertificadoHome').value = now.toISOString().slice(0,16);
 
     const dataField = document.getElementById('receberDataHome');
     const hint = document.getElementById('receberDataHint');
@@ -1500,6 +1508,7 @@ function buildReceberPayload(){
     const instrumentoField = document.getElementById('receberInstrumentoIdHome');
     const linkField = document.getElementById('receberLinkHome');
     const dataField = document.getElementById('receberDataHome');
+    const emissaoField = document.getElementById('receberEmissaoCertificadoHome');
     const obsField = document.getElementById('receberObsHome');
     if (!instrumentoField || !linkField) {
         alert('Instrumento inválido para recebimento.');
@@ -1513,6 +1522,10 @@ function buildReceberPayload(){
     const linkValue = (linkField.value || '').trim();
     if (!linkValue) {
         alert('O campo Link do Certificado é obrigatório');
+        return null;
+    }
+    if (!emissaoField || !emissaoField.value) {
+        alert('O campo Data de emissão do certificado é obrigatório');
         return null;
     }
     if (dataField && dataField.value && dataField.min) {
@@ -1536,6 +1549,12 @@ function buildReceberPayload(){
             payload.data_recebimento = parsed.toISOString();
         }
     }
+    const parsedEmissao = new Date(emissaoField.value);
+    if (Number.isNaN(parsedEmissao.getTime())) {
+        alert('Data de emissão do certificado inválida.');
+        return null;
+    }
+    payload.data_emissao_certificado = parsedEmissao.toISOString();
     return payload;
 }
 

@@ -183,8 +183,8 @@ def instrumentos_status_api(request):
 	last_recebimento = StatusInstrumento.objects.filter(
 		instrumento=OuterRef('pk'),
 		tipo_status__istartswith='Recebido do laborat',
-		data_recebimento__isnull=False
-	).order_by('-data_recebimento', '-id')
+		data_emissao_certificado__isnull=False
+	).order_by('-data_emissao_certificado', '-id')
 
 	latest_cert = CertificadoCalibracao.objects.filter(
 		status__instrumento=OuterRef('pk')
@@ -204,7 +204,7 @@ def instrumentos_status_api(request):
 
 		last_envio_data=Subquery(last_envio.values('data_entrega')[:1]),
 		last_recebimento_data=Subquery(
-			last_recebimento.values('data_recebimento')[:1]
+			last_recebimento.values('data_emissao_certificado')[:1]
 		),
 
 		ultimo_certificado_link=Subquery(latest_cert.values('link')[:1]),
@@ -462,8 +462,8 @@ def indicadores_dashboard(request):
 	last_recebimento_qs = StatusInstrumento.objects.filter(
 		instrumento=OuterRef('pk'),
 		tipo_status__istartswith='Recebido do laborat',
-		data_recebimento__isnull=False
-	).order_by('-data_recebimento', '-id')
+		data_emissao_certificado__isnull=False
+	).order_by('-data_emissao_certificado', '-id')
 	ultima_analise_qs = StatusPontoCalibracao.objects.filter(
 		ponto_calibracao__instrumento=OuterRef('pk')
 	).order_by('-data_criacao', '-id')
@@ -473,7 +473,7 @@ def indicadores_dashboard(request):
 		active_instrumentos.annotate(
 			ultimo_status_tipo=Subquery(latest_status_qs.values('tipo_status')[:1]),
 			ultimo_status_devolucao=Subquery(latest_status_qs.values('data_devolucao')[:1]),
-			ultimo_status_recebimento=Subquery(last_recebimento_qs.values('data_recebimento')[:1]),
+			ultimo_status_recebimento=Subquery(last_recebimento_qs.values('data_emissao_certificado')[:1]),
 			ultimo_envio_data=Subquery(last_envio_qs.values('data_entrega')[:1]),
 			ultima_analise_data=Subquery(ultima_analise_qs.values('data_criacao')[:1]),
 		).values(
@@ -1390,7 +1390,8 @@ def receber_da_calibracao(request):
 		laboratorio_nome?: str,
 		link: str,
 		observacoes?: str,
-		data_recebimento?: ISO datetime
+		data_recebimento?: ISO datetime,
+		data_emissao_certificado: ISO datetime (obrigatório)
 	}
 
 	Ações:
@@ -1448,6 +1449,18 @@ def receber_da_calibracao(request):
 			recebimento_dt = timezone.now()
 		registro_dt = timezone.now()
 
+		# data de emissão do certificado — obrigatória; é a partir dela que a
+		# validade/periodicidade da calibração passa a ser contada.
+		data_emissao_raw = data.get('data_emissao_certificado')
+		if not data_emissao_raw:
+			return JsonResponse({'success': False, 'message': 'Campo `data_emissao_certificado` é obrigatório'}, status=400)
+		try:
+			emissao_dt = parse_datetime(data_emissao_raw)
+		except Exception:
+			emissao_dt = None
+		if not emissao_dt:
+			return JsonResponse({'success': False, 'message': 'Data de emissão do certificado inválida'}, status=400)
+
 		# validação cronológica: data de recebimento não pode ser anterior ao envio ao laboratório
 		ultimo_envio = StatusInstrumento.objects.filter(
 			instrumento=instrumento,
@@ -1460,6 +1473,13 @@ def receber_da_calibracao(request):
 			return JsonResponse({
 				'success': False,
 				'message': f'A data de recebimento ({fmt_receb}) não pode ser anterior à data de envio ao laboratório ({fmt_envio}).'
+			}, status=400)
+		if ultimo_envio and emissao_dt < ultimo_envio.data_entrega:
+			fmt_emissao = emissao_dt.astimezone().strftime('%d/%m/%Y %H:%M')
+			fmt_envio = ultimo_envio.data_entrega.astimezone().strftime('%d/%m/%Y %H:%M')
+			return JsonResponse({
+				'success': False,
+				'message': f'A data de emissão do certificado ({fmt_emissao}) não pode ser anterior à data de envio ao laboratório ({fmt_envio}).'
 			}, status=400)
 
 		# marcar data_recebimento/data_devolucao no último status de envio que estiver sem recebimento
@@ -1493,6 +1513,7 @@ def receber_da_calibracao(request):
 				data_entrega=registro_dt,
 				data_devolucao=recebimento_dt,
 				data_recebimento=recebimento_dt,
+				data_emissao_certificado=emissao_dt,
 				observacoes=data.get('observacoes', ''),
 				tipo_status=f'Recebido do laboratório {lab_name}'
 			)

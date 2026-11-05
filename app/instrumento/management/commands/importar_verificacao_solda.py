@@ -502,6 +502,7 @@ class Command(BaseCommand):
             data_entrega=operation_dt,
             data_devolucao=None,
             data_recebimento=operation_dt,
+            data_emissao_certificado=operation_dt,
             observacoes="Recebimento automático via importação de verificação de solda.",
             tipo_status=f"Recebido do laboratório {lab_name}",
         )
